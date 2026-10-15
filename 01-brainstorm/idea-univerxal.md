@@ -24,15 +24,27 @@
 
 ## Features
 
-### ① Capture — data in (no bank connection, no data entry)
-| Feature | Description |
+### ① Capture — every app where money moves, in one ledger
+**Principle:** webhook if the app offers one → API (user-authorised) if not → forwarded email / slip / export / upload as fallback. Every app with money in or out can connect one way or another. The user connects their own accounts; Univerxal only reads — never logs into bank apps, never moves money.
+
+| App type | Examples | How it connects | Automatic? |
+|---|---|---|---|
+| Payment gateways | Opn (Omise), 2C2P, ChillPay, GB Prime Pay | **Webhook** | ✅ real-time |
+| Marketplaces | Shopee, Lazada, TikTok Shop | **API + push/webhook**, seller-authorised | ✅ real-time |
+| POS | Loyverse and others | **Webhook / API** | ✅ real-time |
+| Banks (any bank) | KBank, SCB, KTB, BBL… | Forwarded alert / e-statement email, statement upload; future: BOT data-sharing or bank partner APIs | 🟡 semi-auto |
+| e-Wallets | TrueMoney, ShopeePay, LINE Pay | Exports, forwarded email alerts | 🟡 semi-auto |
+| Delivery apps | Grab, LINE MAN, foodpanda | Merchant report exports | 🟡 |
+| Chat / social | LINE, Messenger, Instagram, WhatsApp | Univerxal bot (LINE) or chat exports | ✅ / 🟡 |
+| Slips from any bank app | — | Send/share the image to the bot or app; AI reads any bank's slip | ✅ |
+| Voice / text | LINE voice note, web voice agent | ElevenLabs speech-to-text → entries | ✅ |
+| Anything else | Excel/Sheets, e-Tax invoices, notebook photos | Upload | 🟡 |
+
+| Supporting feature | Description |
 |---|---|
-| Universal upload | Bank statements (PDF, any bank), e-wallet statements, slips, receipts, e-Tax invoices, Excel/Sheets, handwritten-notebook photos |
-| Chat import | LINE, Messenger, Instagram, WhatsApp exports → orders, customers, "pay later" debts |
-| Marketplace & POS import | Shopee, Lazada, TikTok Shop, Grab / LINE MAN merchant reports, POS CSV exports |
+| Webhook hub | `/api/webhooks/{provider}`: verify signature → normalise to one transaction format → de-duplicate → ledger |
 | AI document reader | Reads Thai text, slips and tables; shows a confidence level |
 | Review & correct | User fixes anything misread; AI learns the user's categories |
-| Webhooks *(roadmap)* | User-owned channels only: own LINE Official Account, forwarded e-receipt email, seller-approved marketplace accounts |
 
 ### ② Ledger — automatic books
 | Feature | Description |
@@ -132,7 +144,7 @@ Supporting example: *"Your bank shows ฿1.9M; Univerxal knows only ฿1.1M is r
 ## Hackathon scope (by Fri 16 Oct 14:00)
 | Build for real | Slides / mock |
 |---|---|
-| Upload (statement, slips, 1 chat) → AI ledger → deposit classifier | Webhooks, marketplace/POS connectors |
+| Opn test-mode webhook + LINE bot (slips, voice) + statement upload → AI ledger → deposit classifier | Marketplace, POS, e-wallet, email connectors (simulated with real-format sample events) |
 | Personal space + 1 group pot | Full Business space |
 | Analysis, simple forecast, tax meter (3 numbers) | Advanced forecasting, filing forms |
 | Readiness score + PDF package | Real lender submission |
