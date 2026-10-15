@@ -3,9 +3,15 @@
 Category is not fixed yet. Judging is 80% *execution + practicality*, so prefer a real local problem with a tight, reliable demo over raw novelty.
 Every idea uses **U-Bot** as the brain and **ElevenLabs** as the voice; **Avalanche** only if we go Web3 track.
 
+## Shortlist (deep-dived)
+
+| Idea | File | Status |
+|---|---|---|
+| ChatCFO — chats → books, analysis, forecast, tax | [idea-chatcfo.md](idea-chatcfo.md) | Saved |
+
 ---
 
-## 1. Voice Money Guardian ⭐ current favourite
+## 1. Voice Money Guardian
 
 **Pitch:** A Thai-speaking voice assistant that lets elderly people move money by talking — and stops scam transfers before they happen.
 
