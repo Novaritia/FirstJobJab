@@ -2,7 +2,9 @@
 
 > 🔒 **LOCKED 2026-10-15** — our U-Hackathon project. Supersedes [ChatCFO](idea-chatcfo.md) (now its core engine), LoanReady and the Kompass group-money idea.
 >
-> **"AI books, tax and credit for everyone who earns outside a payslip."**
+> **"Your AI money assistant — automatic books and every money task, for everyone who earns outside a payslip."**
+>
+> Core = automatic money management. Credit (LoanReady) is **one feature**, not the point.
 
 ## Problem
 
@@ -81,7 +83,9 @@
 | Payments & rewards | Group settlement and SME payments via the U-Topia app; rewards for keeping books current |
 
 ## Key selling point
-> *"Your bank shows ฿1.9M. Univerxal proves only ฿1.1M is real income — the rest is family transfers and trip money. So you pay less tax, and that verified ฿1.1M gets you a loan."*
+> *"Just send a slip or a voice note on LINE — Univerxal does your books, tax, group money and warns you before cash runs out."*
+
+Supporting example: *"Your bank shows ฿1.9M; Univerxal knows only ฿1.1M is real income"* — which helps tax, planning **and** credit.
 
 ## Competitors
 
@@ -103,7 +107,7 @@
 | Stream | Price |
 |---|---|
 | Personal free (books, group pots, basic tax) | ฿0 — growth engine |
-| Personal Pro (forecasts, full tax, unlimited uploads) | ฿99 / month |
+| Personal Pro (forecasts, full tax, unlimited uploads) — **main revenue** | ฿99 / month |
 | Business (multi-channel, cash flow, receivables) | ฿299 / month |
 | Loan package | ฿990 each |
 | Lender success fee | 0.5–1% of approved loan |

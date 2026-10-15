@@ -4,7 +4,7 @@ Workspace for **U-Hackathon 2026** (hosted by u-topia at Flow Summit, Avani Sukh
 Theme: *The future of AI and Finance*.
 
 ## 🔒 Our project: Univerxal
-**"AI books, tax and credit for everyone who earns outside a payslip."** Upload statements, slips, chats and sales exports → automatic books, analysis, forecast and personal tax; group money for family and friends; a bank-ready loan package carried to lenders through u-topia's identity and compliance layer.
+**"Your AI money assistant — automatic books and every money task, for everyone who earns outside a payslip."** Webhooks, LINE bot and uploads, slips, chats and sales exports → automatic books, analysis, forecast and personal tax; group money for family and friends; a bank-ready loan package carried to lenders through u-topia's identity and compliance layer.
 Full idea: [`01-brainstorm/idea-univerxal.md`](01-brainstorm/idea-univerxal.md)
 
 ## Key facts
