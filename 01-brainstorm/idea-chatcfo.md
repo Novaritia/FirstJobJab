@@ -42,6 +42,30 @@
 ### 5. Credit Passport
 - Verified sales history + forecast as a one-page shareable profile for banks / microlenders.
 
+## Extra features
+
+### ⭐ Top picks
+1. **Deposit Classifier (audit defense)** — e-Payment law counts *every* deposit (family money, friend repaying, own-account transfers). AI tags each deposit as **sale / personal / loan / refund** using chat + slip context.
+   → *"Only ฿1.1M of your ฿1.9M deposits is real income — you're below the VAT threshold."*
+   → If a tax letter arrives: one-click **evidence pack** matching each deposit to its chat proof.
+2. **Customer Credit Limits** — AI sets a safe "pay later" tab per customer from payment history: *"Nok: up to ฿2,000. Bee: cash only."* Cuts bad debt without awkward conversations.
+3. **Monday Morning CFO Call** — weekly 60-second voice briefing via ElevenLabs: *"Sales up 12%, 3 customers owe ฿4,800, cash tight on the 28th, restock lipstick #5."*
+
+### Operations
+4. **Restock prediction** — sales velocity → *"Out of item X in 6 days"* + drafted supplier order.
+5. **Smart pricing** — find high-demand, low-margin products; suggest new prices; what-if shows profit + tax impact.
+6. **Expense by voice note** — *"Paid ฿800 packaging, ฿350 delivery"* → booked instantly; makes the actual-expense tax method realistic.
+7. **Multi-channel merge** — LINE + Facebook + Shopee / Lazada / TikTok Shop exports → one book, one tax number.
+
+### Money & safety
+8. **Business vs personal split** — detect mixing; suggest a fixed "pay yourself" salary.
+9. **Scam-buyer network** — opt-in shared flags: *"This account sent fake slips to 3 other sellers."* (community / u-topia tie-in)
+10. **Micro-financing at the right moment** — predicted cash crunch → short-term loan offer via Credit Passport (revenue model for u-topia).
+11. **Self-employed safety net** — suggest Section 40 social security / retirement savings sized to real income.
+
+### Paperwork
+12. **Auto receipts & e-Tax invoices** — send a receipt / tax invoice back into the chat after each paid order.
+
 ## Already exists? (partly)
 
 | Exists | Gap we fill |
@@ -76,10 +100,12 @@
 **Screens:** Upload → Dashboard → Analysis → Forecast (+ what-if) → Tax → Filing pack / Credit Passport.
 
 ## Scope
-- **MVP:** upload, extraction, dashboard, analysis, cash-flow forecast, tax meter, filing-pack PDF.
-- **Stretch:** what-if simulator, Credit Passport, live LINE bot, voice Q&A.
+- **MVP:** upload, extraction, dashboard, analysis, cash-flow forecast, tax meter, deposit classifier (#1), filing-pack PDF.
+- **Stretch (in order):** customer credit limits (#2), Monday CFO call (#3), what-if simulator, Credit Passport, restock (#4), expense voice note (#6).
+- **Pitch-only (roadmap slide):** #5, #7–#12, live LINE bot.
 
 ## Risks
+- e-Payment "all deposits counted" and Section 40 details are from memory — verify.
 - Tax figures (e-Payment thresholds, 60% flat deduction, ฿1.8M VAT, form names) are from memory — **verify with Revenue Department before demo**.
 - Edited-slip detection by AI vision is unreliable → rely on mismatch / duplicate checks.
 - Forecasts on 3 months of fake data — keep claims modest, show the method.
