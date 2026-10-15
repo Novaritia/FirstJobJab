@@ -59,6 +59,24 @@ Books · Analysis · Forecast · Tax · Group money · Slip guard · Credit
 | **Facebook Page (Messenger)** | Meta Messenger webhook | ✅ Demo (dev mode: team accounts only) |
 | **Instagram DM** | Instagram Messaging webhook (Professional account) | 🟡 Stretch — harder setup |
 
+### 3.1b Personal accounts (no automatic capture)
+Webhooks exist **only for business accounts**. Personal Facebook Messenger, personal Instagram and personal LINE have **no official API** — logging in on the user's behalf or scraping would break platform terms, risk account bans and violate PDPA. We never do it.
+
+| Account | Automatic? |
+|---|---|
+| Facebook Page · Instagram Professional · LINE OA | ✅ Webhook |
+| Facebook personal profile · Instagram personal · LINE personal | ❌ |
+
+For sellers on personal accounts:
+| Option | How | Effort |
+|---|---|---|
+| **Switch to a free business account** ⭐ | Free Facebook Page, Instagram → Professional (settings, ~1 min), free LINE OA — guided in onboarding | One-time, 2–5 min |
+| Share in 2 taps | Long-press slip → Share → Univerxal | Per slip |
+| Import past chats | Facebook "Download Your Information" export → upload; AI extracts orders and slips | Occasional, not real-time |
+| Voice / screenshot | Send to @Univerxal | Anytime |
+
+Onboarding message: *"Switch to a free business account in 2 minutes and Univerxal records everything automatically."*
+
 ### 3.2 Other platforms with webhooks / APIs
 | Platform | History captured | Status |
 |---|---|---|
@@ -243,6 +261,7 @@ AI categorises everything; asks **only when unsure**, with one-tap buttons:
 | Tax facts unverified | Verify 60% flat deduction, allowances, VAT threshold for individuals, form names; label as estimates |
 | Credit-information / loan-intermediary rules | Owner shares, no score sold; ask mentor |
 | Privacy (PDPA) | Consent at connect; business accounts only; u-topia compliance trail |
+| Many sellers use personal profiles (no API) | Guided switch to free Page / IG Professional / LINE OA; share-in-2-taps and chat-export import as fallback |
 
 ## 13. Sources
 - e-Payment thresholds: [Mazars](https://www.forvismazars.com/th/en/insights/doing-business-in-thailand/tax/deposit-and-transfer-transactions-reporting), [Thairath](https://en.thairath.co.th/money/personal_finance/finance_banking/2922087)
