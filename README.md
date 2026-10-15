@@ -1,7 +1,11 @@
 # u-hackathon
 
 Workspace for **U-Hackathon 2026** (hosted by u-topia at Flow Summit, Avani Sukhumvit Bangkok).
-Theme: *The future of AI and Finance*. Deliverables: **public GitHub repo + working demo website + pitch deck**.
+Theme: *The future of AI and Finance*.
+
+## 🔒 Our project: ChatCFO
+**"Your LINE chats are your accountant."** AI that turns a Thai online seller's chat history and payment slips into books, analysis, forecasts, tax and a credit profile — zero manual input.
+Full idea: [`01-brainstorm/idea-chatcfo.md`](01-brainstorm/idea-chatcfo.md) · Problem: [`02-business/problem-and-users.md`](02-business/problem-and-users.md) · Architecture: [`03-tech/architecture.md`](03-tech/architecture.md) Deliverables: **public GitHub repo + working demo website + pitch deck**.
 
 ## Key facts
 
@@ -24,7 +28,8 @@ Theme: *The future of AI and Finance*. Deliverables: **public GitHub repo + work
 
 ### Integrations
 
-- **U-Bot** — u-topia's AI assistant. Must be a core, working part of the product.
+- **U-Bot** — skipped for now (no API documented).
+- **Claude API** — chat/slip extraction and insights.
 - **ElevenLabs** — AI voice (TTS, STT, conversational agents).
 - **Avalanche (AVAX)** — not used (AI track chosen).
 - ~~Tokenomist~~ — not used.
@@ -53,11 +58,12 @@ Theme: *The future of AI and Finance*. Deliverables: **public GitHub repo + work
 ## Status
 
 - [x] References collected (U-Bot guide, ElevenLabs hacker guide)
-- [ ] Idea chosen
+- [x] Idea chosen: **ChatCFO**
 - [x] Track chosen: **AI**
-- [ ] Stack chosen, app scaffolded
-- [ ] U-Bot integration confirmed with staff (no API in guide) and working
-- [ ] ElevenLabs voice working end-to-end
+- [x] Stack chosen (Next.js + Claude API + TS engines)
+- [ ] App scaffolded
+- [ ] Demo dataset (fake Thai chat + slips) ready
+- [ ] (Stretch) ElevenLabs Monday CFO call
 - [ ] Demo deployed
 - [ ] Deck done, demo rehearsed
 - [ ] Submitted before Fri 14:00

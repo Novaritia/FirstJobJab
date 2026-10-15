@@ -1,12 +1,14 @@
 # Idea: ChatCFO
 
 > **"Your LINE chats are your accountant."**
+> 🔒 **LOCKED 2026-10-15** — this is our hackathon project.
+>
 > AI that turns a seller's chat history into books, tax, forecasts and a credit profile — with zero manual input.
 
 ## Problem
 
 - Thai online sellers and micro-shops run their whole business inside LINE / Facebook chats — orders, "transferred already 🙏", slip photos, "pay next week". **No books.**
-- **e-Payment tax law (2022):** banks report accounts with heavy deposit activity (≈3,000+ deposits/yr, or 400+ deposits totalling ฿2M+) to the Revenue Department. Sellers get contacted with **no records to defend themselves**.
+- **e-Payment law (Revenue Code Amendment No. 48, in force since 21 Mar 2019):** banks report anyone with **3,000+ deposits/incoming transfers a year, or 400+ totalling ≥฿2M** (counted per bank, across all accounts) to the Revenue Department. Sellers get contacted with **no records to defend themselves**.
 - They don't know: their income type (40(8)), flat 60% vs actual expenses, VAT registration at ฿1.8M/yr, filing dates (ภ.ง.ด.94 half-year, ภ.ง.ด.90 yearly).
 - Fake / reused transfer slips → shipped goods, no money.
 - No records → no formal credit → loan sharks.
@@ -106,7 +108,7 @@
 
 ## Risks
 - e-Payment "all deposits counted" and Section 40 details are from memory — verify.
-- Tax figures (e-Payment thresholds, 60% flat deduction, ฿1.8M VAT, form names) are from memory — **verify with Revenue Department before demo**.
+- e-Payment thresholds **verified** (Mazars, Thairath). Still verify: 60% flat deduction, ฿1.8M VAT threshold for individuals, current VAT rate (7% extension ran to 30 Sep 2026), form names.
 - Edited-slip detection by AI vision is unreliable → rely on mismatch / duplicate checks.
 - Forecasts on 3 months of fake data — keep claims modest, show the method.
 - Demo data: write a realistic fake Thai chat with 2–3 bad slips.

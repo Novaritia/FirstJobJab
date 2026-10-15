@@ -1,30 +1,47 @@
-# Architecture
-
-Generic shape for any idea in `01-brainstorm/`. Refine once the idea is chosen.
+# Architecture — ChatCFO
 
 ```mermaid
 flowchart LR
-  U[User - browser] -->|mic audio| FE[Website frontend]
-  FE -->|audio / text| BE[Backend API]
-  BE -->|speech-to-text| EL[ElevenLabs]
-  BE -->|prompt + context| UB[U-Bot]
-  UB -->|answer / decision| BE
-  BE -->|text-to-speech| EL
-  BE -->|audio + result| FE
-  FE -.->|Web3 track only| W[Wallet: Core / MetaMask]
-  W -.-> AV[Avalanche C-Chain - Fuji testnet]
-  AV -.-> SC[Smart contract]
+  S[Seller - browser] -->|LINE chat .txt + slip/receipt images| UP[Upload page]
+  UP --> API1[/api/extract/]
+  API1 -->|chat text + images| CL[Claude API]
+  CL -->|JSON: orders, payments, deposits, expenses| API1
+  API1 --> STORE[(Browser state)]
+  STORE --> ENG[TypeScript engines]
+  ENG --> DASH[Dashboard]
+  ENG --> ANA[Analysis]
+  ENG --> FC[Forecast + what-if]
+  ENG --> TAX[Tax meter]
+  ENG --> PACK[Filing pack / Credit Passport]
+  ANA -->|numbers| API2[/api/insights/]
+  API2 --> CL
+  DASH -.stretch.-> API3[/api/voice/]
+  API3 -.-> EL[ElevenLabs TTS]
 ```
 
-## Rules
-- **API keys live only on the backend** (ElevenLabs, U-Bot). Never ship them to the browser.
-- Build the happy path end-to-end first (voice in → U-Bot → voice out), then add Web3.
-- Have a fallback: text input if the mic fails, pre-recorded audio if the API is slow.
+## Data model (shared between AI output and engines)
 
-## Typical demo data flow
-1. User holds the mic button and speaks.
-2. Backend sends audio to ElevenLabs speech-to-text → text.
-3. Backend sends text + context to U-Bot → decision / reply.
-4. (Web3) Frontend asks the wallet to sign the transaction on Fuji.
-5. Backend sends the reply to ElevenLabs text-to-speech → audio.
-6. Frontend plays audio and shows the result on screen.
+```ts
+type Order    = { id: string; date: string; customer: string; items: { name: string; qty: number; price: number }[]; total: number; chatRef: string };
+type Payment  = { id: string; date: string; customer: string; amount: number; slipImage?: string; orderId?: string; slipRef?: string };
+type Deposit  = { id: string; date: string; amount: number; from: string; kind: "sale" | "personal" | "loan" | "refund"; reason: string; evidence: string };
+type Expense  = { id: string; date: string; category: string; amount: number; receiptImage?: string };
+type SlipFlag = { paymentId: string; issue: "duplicate" | "amount_mismatch" | "no_matching_order" | "suspected_edit"; detail: string };
+```
+
+## Engines (plain TypeScript, unit-testable)
+| Engine | Input | Output |
+|---|---|---|
+| `books` | orders, payments, expenses | revenue, profit, receivables per customer |
+| `slipGuard` | payments, orders | `SlipFlag[]` (duplicate ref, amount ≠ order, no order) |
+| `analysis` | books | health score + reasons, product margins, late payers, churn risk, anomalies |
+| `forecast` | daily cash series | 30/60/90-day cash + sales forecast (moving average + trend + weekday pattern), crunch date |
+| `whatIf` | books + change (price %, cost, product drop) | new profit / cash / tax |
+| `tax` | deposits, books, expenses | income (sales only), flat-60% vs actual tax, VAT countdown, e-Payment risk, deduction tips |
+| `creditLimit` | payment history per customer | safe tab amount per customer |
+
+## Rules
+- API keys only on the server routes.
+- AI never produces tax or forecast numbers — only extracted facts and wording.
+- Ship a **seeded demo dataset** so the demo works even if upload or AI is slow.
+- Every extracted item keeps `chatRef` / `evidence` so the seller (and the audit pack) can trace it back to the chat.

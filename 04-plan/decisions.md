@@ -22,8 +22,15 @@ Newest at the bottom. Format: Context / Options / Choice / Why.
 - **Context:** `ubot-user-guide.pdf` documents only the chat web app — no API.
 - **Choice:** Pending — ask staff whether an API/embed exists. See `03-tech/ubot.md`.
 
-## YYYY-MM-DD — Idea
-- **Context:**
-- **Options:**
-- **Choice:**
-- **Why:**
+## 2026-10-15 — U-Bot
+- **Choice:** Skip U-Bot for now (no API documented; 5% of score). Revisit if staff provide an API.
+
+## 2026-10-15 — Idea: ChatCFO 🔒
+- **Context:** Judging is 80% execution + practicality. Brainstormed ~20 ideas (see `01-brainstorm/`).
+- **Options:** ChatCFO, Debt Escape Agent, Intent Money, Voice Money Guardian, others.
+- **Choice:** **ChatCFO** — chats → books, analysis, prediction, tax, Credit Passport. Full detail: `01-brainstorm/idea-chatcfo.md`.
+- **Why:** Real, current Thai pain (e-Payment reporting, fake slips, no credit); judges recognise it instantly; strong demo moments; buildable in a day; fits u-topia PayFi.
+
+## 2026-10-15 — Stack
+- **Choice:** Next.js on Vercel + Claude API (extraction/insights) + plain TypeScript engines (tax, forecast) + ElevenLabs TTS (stretch). Detail: `03-tech/stack.md`.
+- **Why:** One repo + one deploy; exact numbers from code, not AI; no database needed for the demo.
