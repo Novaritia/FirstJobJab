@@ -1,7 +1,7 @@
 # Idea: ChatCFO
 
 > **"Your LINE chats are your accountant."**
-> 🔒 **LOCKED 2026-10-15** — this is our hackathon project.
+> ⚠️ **SUPERSEDED 2026-10-15** by [Univerxal](idea-univerxal.md) — standalone bookkeeping already exists (Parnuan, Zendai, FlowAccount). ChatCFO lives on as Univerxal's core engine.
 >
 > AI that turns a seller's chat history into books, tax, forecasts and a credit profile — with zero manual input.
 

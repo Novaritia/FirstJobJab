@@ -3,9 +3,9 @@
 Workspace for **U-Hackathon 2026** (hosted by u-topia at Flow Summit, Avani Sukhumvit Bangkok).
 Theme: *The future of AI and Finance*.
 
-## 🔒 Our project: ChatCFO
-**"Your LINE chats are your accountant."** AI that turns a Thai online seller's chat history and payment slips into books, analysis, forecasts, tax and a credit profile — zero manual input.
-Full idea: [`01-brainstorm/idea-chatcfo.md`](01-brainstorm/idea-chatcfo.md) · Problem: [`02-business/problem-and-users.md`](02-business/problem-and-users.md) · Architecture: [`03-tech/architecture.md`](03-tech/architecture.md) Deliverables: **public GitHub repo + working demo website + pitch deck**.
+## 🔒 Our project: Univerxal
+**"AI books, tax and credit for everyone who earns outside a payslip."** Upload statements, slips, chats and sales exports → automatic books, analysis, forecast and personal tax; group money for family and friends; a bank-ready loan package carried to lenders through u-topia's identity and compliance layer.
+Full idea: [`01-brainstorm/idea-univerxal.md`](01-brainstorm/idea-univerxal.md)
 
 ## Key facts
 
@@ -58,7 +58,7 @@ Full idea: [`01-brainstorm/idea-chatcfo.md`](01-brainstorm/idea-chatcfo.md) · P
 ## Status
 
 - [x] References collected (U-Bot guide, ElevenLabs hacker guide)
-- [x] Idea chosen: **ChatCFO**
+- [x] Idea chosen: **Univerxal**
 - [x] Track chosen: **AI**
 - [x] Stack chosen (Next.js + Claude API + TS engines)
 - [ ] App scaffolded

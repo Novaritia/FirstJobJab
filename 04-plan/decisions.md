@@ -25,7 +25,7 @@ Newest at the bottom. Format: Context / Options / Choice / Why.
 ## 2026-10-15 — U-Bot
 - **Choice:** Skip U-Bot for now (no API documented; 5% of score). Revisit if staff provide an API.
 
-## 2026-10-15 — Idea: ChatCFO 🔒
+## 2026-10-15 — Idea: ChatCFO (superseded)
 - **Context:** Judging is 80% execution + practicality. Brainstormed ~20 ideas (see `01-brainstorm/`).
 - **Options:** ChatCFO, Debt Escape Agent, Intent Money, Voice Money Guardian, others.
 - **Choice:** **ChatCFO** — chats → books, analysis, prediction, tax, Credit Passport. Full detail: `01-brainstorm/idea-chatcfo.md`.
@@ -34,3 +34,11 @@ Newest at the bottom. Format: Context / Options / Choice / Why.
 ## 2026-10-15 — Stack
 - **Choice:** Next.js on Vercel + Claude API (extraction/insights) + plain TypeScript engines (tax, forecast) + ElevenLabs TTS (stretch). Detail: `03-tech/stack.md`.
 - **Why:** One repo + one deploy; exact numbers from code, not AI; no database needed for the demo.
+
+## 2026-10-15 — ChatCFO dropped as standalone
+- **Context:** Bookkeeping-in-chat already exists (Parnuan, Zendai, FlowAccount AI Connector, PEAK). ~50 alternative ideas explored; most already existed, needed datasets, could be faked, or required bank access / licences.
+- **Choice:** Keep ChatCFO only as the core engine of a broader product.
+
+## 2026-10-15 — Idea: Univerxal 🔒
+- **Choice:** **Univerxal** — AI books, tax and credit for everyone who earns outside a payslip. Personal + Business + Group spaces; ChatCFO engine + LoanReady + group money + u-topia credit/identity/compliance layer. Full detail: `01-brainstorm/idea-univerxal.md`.
+- **Why:** Legal as a third party (upload only, never holds money or lends); verified problems (e-Payment reporting, 60–70% SME loan rejection); differentiated (deposit classifier separates reimbursements from income for tax and credit); multiple revenue streams; fits u-topia's credit/identity/compliance strength.
