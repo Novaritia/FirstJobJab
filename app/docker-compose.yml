@@ -16,11 +16,14 @@ services:
     build: { context: ., target: api }
     env_file: .env
     environment:
-      DATABASE_URL: postgresql://fjm:${POSTGRES_PASSWORD:-fjm}@db:5432/fjm
+      # same DB as native dev (fjm_demo); set DB_NAME in .env to use another DB
+      DATABASE_URL: postgresql://fjm:${POSTGRES_PASSWORD:-fjm}@db:5432/${DB_NAME:-fjm_demo}
       NODE_ENV: production
       OCR_URL: http://ocr:8765
+      WEB_ORIGIN: ${WEB_ORIGIN:-http://localhost:3000}
+      TRUST_PROXY: ${TRUST_PROXY:-0}
     ports: ["4000:4000"]
-    volumes: [uploads:/repo/apps/api/uploads]
+    volumes: ["./apps/api/uploads:/repo/apps/api/uploads"]
     depends_on: { db: { condition: service_healthy }, ocr: { condition: service_started } }
     profiles: [full]
 
@@ -44,4 +47,3 @@ volumes:
   dbdata:
     name: app_dbdata
     external: true
-  uploads:

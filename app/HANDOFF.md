@@ -63,6 +63,17 @@ pnpm --filter web dev                # :3000
 # OCR sidecar (optional; else tesseract): cd apps/ocr && pip install rapidocr==3.10.0 onnxruntime fastapi uvicorn python-multipart opencv-python-headless && uvicorn server:app --port 8765
 ```
 Full stack in Docker: `docker compose --profile full up -d --build`.
+
+**Status 2026-10-16 12:50 ICT:** full Docker stack (db+api+web+ocr) is what serves :3000/:4000 locally now; native servers stopped. Compose `api` uses `fjm_demo` (`DB_NAME`), bind-mounts `./apps/api/uploads`, `OCR_URL=http://ocr:8765`. Smoke ✅: web / and /login 200, CORS+cookie from web origin, demo login, 🔥10 + coverage 5/6, KBANK_2026-09 upload 50/50 ✅ (cancelled), slip OCR via `ocr` container (throwaway user, deleted). Build ~2.5 min, start ~7 s, images api 3.24 GB / web 3.24 GB / ocr 770 MB. ⚠️ Demo PII was encrypted with an older `PII_KEY` (.env changed 12:37 after seeding) → `/profile` 500 and PDF auto-unlock fails (upload with password `14031999` works). Same with native. Fix = restore the old keys in `.env`, or `pnpm --filter api seed` (re-encrypts birthDate/nationalId only) — needs user decision.
+
+### Deploy to server (checklist)
+1. Install Docker + compose plugin; copy repo; `cd app`; `docker volume create app_dbdata`.
+2. `.env` (never commit): `PUBLIC_API_URL=https://<host>:4000` (baked into web at build), `WEB_ORIGIN=https://<host>` (CORS, comma-separated ok), `POSTGRES_PASSWORD=<strong>`, `TRUST_PROXY=1` only behind a reverse proxy, `PII_KEY`/`FILE_KEY`/`IP_HMAC_KEY` (32-byte base64; keep the SAME keys as the data you bring, else PII can't be decrypted), `GEMINI_API_KEY`, optional `ELEVENLABS_API_KEY`, optional `DB_NAME` (default `fjm_demo`).
+3. HTTPS needed: the session cookie is `Secure` in production, so plain `http://<IP>` logins won't stick (localhost is exempt). Put Caddy/nginx with TLS in front (then `TRUST_PROXY=1`).
+4. Bring data (optional): `docker compose up -d db`, create DB `fjm_demo`, `psql < backups/fjm_demo_<ts>.sql`; copy `apps/api/uploads/`.
+5. `docker compose --profile full up -d --build` → check `docker compose ps`, `docker compose logs api` ("No pending migrations"/"Nest application successfully started").
+6. OCR container downloads the Thai model on first request (needs outbound internet; first slip ~8 s).
+7. Never `docker compose down -v`; backup with `sh backup-db.sh`.
 Demo login: `demo@firstjobjab.app` / `demo1234`. Live demo: upload `mock-data/KBANK_2026-09.pdf` (+ BBL) → streak 6/6. `BROKEN_KBANK_2026-06.pdf` shows ⚠️ rows.
 Local DB in use: **`fjm_demo`** (`.env` DATABASE_URL). Old `fjm` DB has test junk — reset needs user consent (Prisma blocks AI resets).
 
