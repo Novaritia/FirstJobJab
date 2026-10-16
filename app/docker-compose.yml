@@ -1,11 +1,13 @@
 services:
   db:
     image: postgres:17
+    restart: unless-stopped
     environment:
       POSTGRES_USER: fjm
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-fjm}
       POSTGRES_DB: fjm
-    ports: ["5432:5432"]
+    # host-only: never expose Postgres on the server's public IP
+    ports: ["127.0.0.1:5432:5432"]
     volumes: [dbdata:/var/lib/postgresql/data]
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U fjm"]
@@ -14,6 +16,7 @@ services:
 
   api:
     build: { context: ., target: api }
+    restart: unless-stopped
     env_file: .env
     environment:
       # same DB as native dev (fjm_demo); set DB_NAME in .env to use another DB
@@ -21,8 +24,10 @@ services:
       NODE_ENV: production
       OCR_URL: http://ocr:8765
       WEB_ORIGIN: ${WEB_ORIGIN:-http://localhost:3000}
+      # proxy hops in front of the api: 0 = none, 1 = proxy manager, 2 = Cloudflare + proxy manager
       TRUST_PROXY: ${TRUST_PROXY:-0}
-    ports: ["4000:4000"]
+    # BIND_IP=127.0.0.1 (default) keeps it reachable only via the proxy manager / localhost; 0.0.0.0 to open on LAN
+    ports: ["${BIND_IP:-127.0.0.1}:4000:4000"]
     volumes: ["./apps/api/uploads:/repo/apps/api/uploads"]
     depends_on: { db: { condition: service_healthy }, ocr: { condition: service_started } }
     profiles: [full]
@@ -37,13 +42,32 @@ services:
     build:
       context: .
       target: web
+      # baked into the browser bundle at build time: rebuild web after changing it
       args: { NEXT_PUBLIC_API_URL: "${PUBLIC_API_URL:-http://localhost:4000}" }
-    ports: ["3000:3000"]
+    restart: unless-stopped
+    ports: ["${BIND_IP:-127.0.0.1}:3000:3000"]
     depends_on: [api]
     profiles: [full]
+
+  # Nginx Proxy Manager (docs/deploy.md): terminates HTTPS from Cloudflare, forwards to web:3000 / api:4000
+  proxy:
+    image: jc21/nginx-proxy-manager:latest
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+      # admin UI: host-only by default, open with an SSH tunnel (ssh -L 81:localhost:81 user@server)
+      - "${NPM_ADMIN_BIND:-127.0.0.1}:81:81"
+    volumes:
+      - npmdata:/data
+      - npmletsencrypt:/etc/letsencrypt
+    depends_on: [web, api]
+    profiles: [proxy]
 
 volumes:
   # external: `docker compose down -v` will NOT delete the database (create once: docker volume create app_dbdata)
   dbdata:
     name: app_dbdata
     external: true
+  npmdata:
+  npmletsencrypt:

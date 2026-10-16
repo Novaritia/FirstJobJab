@@ -12,8 +12,10 @@ try { process.loadEnvFile('../../.env'); } catch { /* env comes from the host (D
 
 export async function createApp() {
   for (const k of ['PII_KEY', 'FILE_KEY', 'IP_HMAC_KEY'] as const) envKey(k); // fail fast on missing keys
-  // TRUST_PROXY=1 only behind a real proxy (Cloudflare); otherwise X-Forwarded-For could spoof the rate-limit key
-  const app = await NestFactory.create<NestFastifyApplication>(AppModule, new FastifyAdapter({ trustProxy: process.env.TRUST_PROXY === '1', bodyLimit: 1024 * 1024 }), {
+  // TRUST_PROXY = number of proxy hops in front (1 = proxy manager, 2 = Cloudflare + proxy manager). A hop count, not `true`:
+  // trusting every hop would let a client-sent X-Forwarded-For spoof req.ip (the rate-limit key)
+  const hops = Number(process.env.TRUST_PROXY ?? 0);
+  const app = await NestFactory.create<NestFastifyApplication>(AppModule, new FastifyAdapter({ trustProxy: hops > 0 ? hops : false, bodyLimit: 1024 * 1024 }), {
     logger: ['error', 'warn', 'log'],
   });
   await app.register(cookie);
