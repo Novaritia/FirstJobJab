@@ -2,6 +2,7 @@
 import { useRef, useState } from "react";
 import { BookOpen, Camera, CircleCheck, FileUp, Hand, ImagePlus, KeyRound, Loader2, TriangleAlert, X } from "lucide-react";
 import { motion } from "motion/react";
+import { toast } from "sonner";
 import { EASE, Flame, Rolling } from "@/components/motion";
 import { FireDeadline } from "@/components/StreakTrack";
 import { UploadHistory } from "@/components/UploadHistory";
@@ -211,7 +212,8 @@ export default function UploadPage() {
                 if (streak?.gained) setCelebrate(streak); // re-import of known rows: no +1
                 setAnnounce(`ยืนยันแล้ว นำเข้า ${imported} รายการ`);
               }}
-              onUpdate={(result) => patch(it.key, { result })} />
+              onUpdate={(result) => patch(it.key, { result })}
+              onCancel={() => setItems((xs) => xs.filter((x) => x.key !== it.key))} />
           </li>
         ))}
       </ul>
@@ -228,15 +230,32 @@ export default function UploadPage() {
   );
 }
 
-function UploadItem({ item, onRetry, onConfirmed, onUpdate }: {
+function UploadItem({ item, onRetry, onConfirmed, onUpdate, onCancel }: {
   item: Item;
   onRetry: (password?: string) => void;
   onConfirmed: (imported: number, streak: Streak | undefined) => void;
   onUpdate: (r: UploadResult) => void;
+  onCancel: () => void;
 }) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const r = item.result;
+
+  // pending upload → DELETE /uploads/:id (nothing imported); no upload created yet → just clear it
+  async function cancel() {
+    if (!r) return onCancel();
+    setBusy(true);
+    try {
+      await api(`/uploads/${r.uploadId}`, json("DELETE"));
+      toast.success("ยกเลิกการอัปโหลดแล้ว ไม่มีรายการถูกนำเข้า");
+      dataChanged(); // history refetch
+      onCancel();
+    } catch (e) {
+      toast.error(errorText(e));
+      setBusy(false);
+    }
+  }
+  const cancelButton = <Button variant="soft" onClick={cancel} disabled={busy} className="max-sm:w-full">ยกเลิกการอัปโหลด</Button>;
 
   if (item.status === "uploading") return <Card aria-busy><p className="flex items-center gap-1.5 animate-pulse motion-reduce:animate-none"><Loader2 aria-hidden size={16} className="shrink-0 animate-spin motion-reduce:animate-none" />กำลังอ่าน {nameOf(item)}…</p></Card>;
   if (item.status === "error") {
@@ -244,6 +263,7 @@ function UploadItem({ item, onRetry, onConfirmed, onUpdate }: {
       <Card>
         <p className="mb-3 font-semibold">{nameOf(item)}</p>
         <ErrorNote>{item.error}</ErrorNote>
+        <div className="mt-3">{cancelButton}</div>
       </Card>
     );
   }
@@ -257,7 +277,10 @@ function UploadItem({ item, onRetry, onConfirmed, onUpdate }: {
           </Field>
           <RequiredLegend />
           {item.error && <ErrorNote>{item.error}</ErrorNote>}
-          <Button type="submit" className="self-start">ปลดล็อกและอ่าน</Button>
+          <div className="flex flex-wrap gap-3">
+            <Button type="submit">ปลดล็อกและอ่าน</Button>
+            {cancelButton}
+          </div>
         </form>
       </Card>
     );
@@ -367,6 +390,7 @@ function UploadItem({ item, onRetry, onConfirmed, onUpdate }: {
 
       <footer className="flex flex-wrap items-center justify-end gap-3 bg-subtle px-5 py-3">
         {error && <div className="w-full"><ErrorNote>{error}</ErrorNote></div>}
+        {(!allOk || error) && cancelButton}
         {unverified ? (
           <Button onClick={() => confirm(true)} disabled={busy} className="max-sm:w-full">ยืนยันทั้งหมด {r.rows.length} แถว (ยังไม่ตรวจยอด)</Button>
         ) : (
