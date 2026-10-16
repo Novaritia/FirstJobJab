@@ -16,7 +16,10 @@ services:
 
   api:
     build: { context: ., target: api }
+    container_name: firstjobjab-api
     restart: unless-stopped
+    # Nginx Proxy Manager reaches it over the shared network as firstjobjab-api:4000
+    networks: [default, proxy]
     env_file: .env
     environment:
       # same DB as native dev (fjm_demo); set DB_NAME in .env to use another DB
@@ -44,10 +47,20 @@ services:
       target: web
       # baked into the browser bundle at build time: rebuild web after changing it
       args: { NEXT_PUBLIC_API_URL: "${PUBLIC_API_URL:-http://localhost:4000}" }
+    container_name: firstjobjab-web
     restart: unless-stopped
+    # Nginx Proxy Manager reaches it over the shared network as firstjobjab-web:3000
+    networks: [default, proxy]
     ports: ["${BIND_IP:-127.0.0.1}:3000:3000"]
     depends_on: [api]
     profiles: [full]
+
+networks:
+  proxy:
+    # The Docker network Nginx Proxy Manager is on; see "docker network ls".
+    # No NPM (local dev)? create it once: docker network create npm_default
+    name: ${NPM_NETWORK:-npm_default}
+    external: true
 
 volumes:
   # external: `docker compose down -v` will NOT delete the database (create once: docker volume create app_dbdata)

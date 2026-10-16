@@ -1,6 +1,6 @@
 # Deploy: Cloudflare → Nginx Proxy Manager → Docker
 
-Server: `103.216.158.122`. Traffic: browser → Cloudflare (orange cloud) → the server's existing Nginx Proxy Manager (ports 80/443) → `firstjobjab-web:3000` / `firstjobjab-api:4000` over NPM's Docker network. `docker-compose.proxy.yml` joins web and api to that network and publishes no host ports; Postgres is bound to `127.0.0.1` only.
+Server: `103.216.158.122`. Traffic: browser → Cloudflare (orange cloud) → the server's existing Nginx Proxy Manager (ports 80/443) → `firstjobjab-web:3000` / `firstjobjab-api:4000` over NPM's Docker network. `docker-compose.yml` joins web and api to that network; their host ports and Postgres are bound to `127.0.0.1` only.
 
 ## 1. Cloudflare DNS
 | Type | Name | Content | Proxy |
@@ -23,11 +23,11 @@ Plus the keys from `.env.example` (`PII_KEY`, `FILE_KEY`, `IP_HMAC_KEY`, Gemini,
 ## 3. Start
 ```sh
 docker volume create app_dbdata   # once
-docker compose -f docker-compose.yml -f docker-compose.proxy.yml --profile full up -d --build
+docker compose --profile full up -d --build
 ```
-`PUBLIC_API_URL` is baked into the web bundle at build time, so after changing it rebuild web (same `-f` flags, `build web`). Needs Docker Compose ≥ 2.24 (`ports: !reset`).
+`PUBLIC_API_URL` is baked into the web bundle at build time, so after changing it rebuild web: `docker compose --profile full build web`.
 
-Locally, keep using plain `docker compose --profile full up -d --build` (no NPM network needed).
+Locally (no NPM): run `docker network create npm_default` once, then the same command.
 
 ## 4. Nginx Proxy Manager
 1. SSL Certificates → Add → **Custom** → upload the Cloudflare Origin cert and key.
