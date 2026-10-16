@@ -10,6 +10,7 @@ import { UserCtx } from "@/components/user";
 import { Initial } from "@/components/session";
 import { Reconsent } from "@/components/Reconsent";
 import { StreakBadge } from "@/components/StreakTrack";
+import { BrandMark } from "@/components/BrandMark";
 
 const GROUPS = [
   { label: "ภาพรวม", items: [{ href: "/dashboard", label: "หน้าหลัก", icon: LayoutDashboard }, { href: "/assistant", label: "ผู้ช่วย", icon: MessageCircle }] },
@@ -46,7 +47,7 @@ export default function AppLayout({ children }: LayoutProps<"/">) {
       {/* sidebar: icon rail on tablet (expandable), full on desktop */}
       <nav aria-label="เมนูหลัก" className={cx("sticky top-0 hidden h-dvh shrink-0 flex-col border-r border-line bg-shell md:flex", open ? "w-60" : "w-16 lg:w-60")}>
         <div className="flex h-14 items-center justify-between border-b border-line px-4">
-          <Link href="/dashboard" className={cx("font-bold text-text", wide)}>FirstJobJab</Link>
+          <Link href="/dashboard" className="flex min-w-0 items-center gap-2 font-bold text-text"><BrandMark size={32} className={cx("shrink-0", open ? "" : "md:max-lg:hidden")} /><span className={wide}>FirstJobJab</span></Link>
           <StreakBadge className={open ? "" : "max-lg:hidden"} />
           <button type="button" onClick={() => setOpen(!open)} aria-expanded={open} aria-label={open ? "ย่อเมนู" : "ขยายเมนู"}
             className="grid size-9 place-items-center rounded text-muted hover:bg-subtle lg:hidden">
@@ -84,7 +85,7 @@ export default function AppLayout({ children }: LayoutProps<"/">) {
 
       <div className="flex min-w-0 flex-1 flex-col">
         <header className="sticky top-0 z-30 flex h-14 items-center justify-between border-b border-line bg-surface px-4 md:hidden">
-          <Link href="/dashboard" className="font-bold">FirstJobJab</Link>
+          <Link href="/dashboard" className="flex items-center gap-2 font-bold"><BrandMark size={30} />FirstJobJab</Link>
           <div className="flex items-center gap-1">
             <StreakBadge />
             <Link href="/assistant" className="flex min-h-11 items-center gap-1.5 px-2 text-sm font-medium text-primary"><MessageCircle aria-hidden size={16} /> ถามผู้ช่วย</Link>

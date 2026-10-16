@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
 import type { ReactNode } from "react";
+import { BrandMark } from "./BrandMark";
 
 /** Must match TERMS_VERSION / PRIVACY_VERSION in apps/api/src/security-util.ts (and LEGAL_VERSION in AuthForm). */
 export const LEGAL_VERSION = "2026-10-16";
@@ -20,7 +21,7 @@ export function LegalPage({ title, intro, sections, other }: {
     <div className="flex flex-1 flex-col bg-bg text-text">
       <header className="sticky top-0 z-30 border-b border-line bg-surface">
         <nav className="mx-auto flex h-14 max-w-6xl items-center justify-between gap-2 px-4 sm:px-6" aria-label="หลัก">
-          <Link href="/" className="font-bold">FirstJobJab</Link>
+          <Link href="/" className="flex items-center gap-2 font-bold"><BrandMark size={32} />FirstJobJab</Link>
           <Link href="/" className="-mr-2 inline-flex min-h-11 items-center gap-1 rounded-md px-2 text-sm font-medium hover:text-primary sm:px-3"><ArrowLeft aria-hidden size={16} /> กลับหน้าแรก</Link>
         </nav>
       </header>

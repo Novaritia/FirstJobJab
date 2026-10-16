@@ -6,6 +6,7 @@ import { Flame, Loop, Reveal } from "@/components/motion";
 import { StreakTrack } from "@/components/StreakTrack";
 import { Pricing } from "@/components/Pricing";
 import { HeroCta, SessionNav } from "@/components/session";
+import { BrandMark } from "@/components/BrandMark";
 
 // Synthetic ticker of checked rows (decorative, aria-hidden).
 const TICKER = [
@@ -31,7 +32,7 @@ export default function Landing() {
     <div className="lp flex flex-1 flex-col">
       <header className="sticky top-0 z-30 border-b border-line bg-surface">
         <nav className="mx-auto flex h-14 max-w-6xl items-center justify-between gap-2 px-4 sm:px-6" aria-label="หลัก">
-          <Link href="/" className="font-bold">FirstJobJab</Link>
+          <Link href="/" className="flex items-center gap-2 font-bold"><BrandMark size={34} />FirstJobJab</Link>
           <div className="flex items-center gap-1 sm:gap-3">
             <a href="#pricing" className="inline-flex min-h-11 items-center px-2 text-sm font-medium hover:text-primary sm:px-3">ราคา</a>
             <SessionNav />
@@ -145,7 +146,7 @@ export default function Landing() {
       <footer className="border-t border-line">
         <div className="mx-auto grid max-w-6xl gap-8 px-4 py-10 text-sm sm:px-6 sm:grid-cols-2 md:grid-cols-[2fr_1fr_1fr]">
           <div className="sm:col-span-2 md:col-span-1">
-            <p className="font-bold">FirstJobJab</p>
+            <p className="flex items-center gap-2 font-bold"><BrandMark size={36} />FirstJobJab</p>
             <p className="mt-2 max-w-sm text-muted">ตัวเลขทั้งหมดเป็นการประมาณ ไม่ใช่คำแนะนำทางการเงินหรือภาษี ตรวจกับเอกสารจริงก่อนตัดสินใจ</p>
           </div>
           <nav aria-label="ผลิตภัณฑ์">

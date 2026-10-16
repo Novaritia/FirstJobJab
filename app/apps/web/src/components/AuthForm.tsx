@@ -10,6 +10,7 @@ const SHOW_DEMO = MOCK || process.env.NEXT_PUBLIC_SHOW_DEMO === "1" || process.e
 export const LEGAL_VERSION = "2026-10-16";
 import { Button, ButtonLink, Card, ErrorNote, Field, Req, RequiredLegend } from "./ui";
 import { Initial, logout, useMe } from "./session";
+import { BrandMark } from "./BrandMark";
 
 export function AuthForm({ mode }: { mode: "login" | "register" }) {
   const router = useRouter();
@@ -39,7 +40,7 @@ export function AuthForm({ mode }: { mode: "login" | "register" }) {
 
   return (
     <main className="mx-auto flex w-full max-w-md flex-1 flex-col px-4 py-8 sm:justify-center sm:py-12">
-      <Link href="/" className="mx-auto mb-6 inline-flex min-h-11 items-center px-2 text-xl font-bold text-primary">FirstJobJab</Link>
+      <Link href="/" className="mx-auto mb-6 inline-flex min-h-11 flex-col items-center gap-2 px-2 text-xl font-bold text-primary"><BrandMark size={72} />FirstJobJab</Link>
       {me ? (
         <Card className="text-center">
           <div className="flex justify-center"><Initial name={me.displayName} className="size-12 text-lg" /></div>

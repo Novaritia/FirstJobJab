@@ -1,3 +1,5 @@
+<p align="center"><img src="app/apps/web/public/logo.png" width="120" alt="FirstJobJab"></p>
+
 # FirstJobJab
 
 **Your bank statements, turned into a money plan — built for Thai first jobbers.**
