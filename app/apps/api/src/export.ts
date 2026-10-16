@@ -132,7 +132,7 @@ const kv = (doc: Doc, y: number, items: [string, string, boolean?][], w = 260) =
   return y;
 };
 
-export interface StatementMeta { holder: string; from: string; to: string; generatedAt: string; accounts: string[] }
+export interface StatementMeta { holder: string; from: string; to: string; generatedAt: string; accounts: string[]; exportNo: number }
 
 export async function statementPdf(rows: ExportRow[], m: StatementMeta): Promise<Buffer> {
   const title = 'รายงานสรุปรายรับ–รายจ่าย';
@@ -143,6 +143,7 @@ export async function statementPdf(rows: ExportRow[], m: StatementMeta): Promise
     ['ช่วงเวลา', period],
     ['บัญชี', m.accounts.join(', ') || '-'],
     ['จัดทำเมื่อ', m.generatedAt],
+    ['ส่งออกครั้งที่', String(m.exportNo)],
   ]);
   const t = totals(rows);
   txt(doc, 'สรุปยอด (บาท)', L, y, { bold: true, size: 11 }); y += 18;
@@ -173,7 +174,7 @@ export async function statementPdf(rows: ExportRow[], m: StatementMeta): Promise
   return toBuffer(doc);
 }
 
-export interface TaxPackMeta { holder: string; nationalId: string; year: number; generatedAt: string; monthsSeen: number }
+export interface TaxPackMeta { holder: string; nationalId: string; year: number; generatedAt: string; monthsSeen: number; exportNo: number }
 export const formatNationalId = (id: string) => id.replace(/^(\d)(\d{4})(\d{5})(\d{2})(\d)$/, '$1-$2-$3-$4-$5');
 
 /** monthly = YYYY-MM → {salary, other} actually received (satang). */
@@ -187,6 +188,7 @@ export async function taxPackPdf(tax: TaxResult & { salaryIncome: number; otherI
     ['ปีภาษี', `${m.year + 543} (${m.year})`],
     ['แบบที่ใช้ยื่น (ประมาณ)', form],
     ['จัดทำเมื่อ', m.generatedAt],
+    ['ส่งออกครั้งที่', String(m.exportNo)],
   ]);
   const B = (s: number) => money(s);
   txt(doc, '1. เงินได้พึงประเมิน (ประมาณการทั้งปี, บาท)', L, y, { bold: true, size: 11 }); y += 18;

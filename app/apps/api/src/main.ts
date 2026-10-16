@@ -17,7 +17,7 @@ export async function createApp() {
     logger: ['error', 'warn', 'log'],
   });
   await app.register(cookie);
-  await app.register(cors, { origin: (process.env.WEB_ORIGIN ?? 'http://localhost:3000').split(','), credentials: true, methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE'] });
+  await app.register(cors, { origin: (process.env.WEB_ORIGIN ?? 'http://localhost:3000').split(','), credentials: true, methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE'], exposedHeaders: ['content-disposition'] });
   await app.register(multipart, { limits: { fileSize: MAX_PDF_BYTES, files: 1, fields: 5 } });
   return app;
 }

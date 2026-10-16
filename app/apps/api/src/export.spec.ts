@@ -62,7 +62,7 @@ describe('Range', () => {
 describe('statementPdf', () => {
   it('renders a multi-page PDF', async () => {
     const many = Array.from({ length: 120 }, (_, i) => row({ amount: 100 * (i + 1), description: `รายการทดสอบภาษาไทย ${i}` }));
-    const pdf = await statementPdf(many, { holder: 'สมหญิง ใจดี', from: '2026-04-01', to: '2026-09-30', generatedAt: 'now', accounts: ['กสิกรไทย'] });
+    const pdf = await statementPdf(many, { holder: 'สมหญิง ใจดี', from: '2026-04-01', to: '2026-09-30', generatedAt: 'now', accounts: ['กสิกรไทย'], exportNo: 1 });
     expect(pdf.subarray(0, 5).toString()).toBe('%PDF-');
     expect((pdf.toString('latin1').match(/\/Type \/Page\b/g) ?? []).length).toBeGreaterThan(1);
   });
