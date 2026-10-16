@@ -8,7 +8,8 @@ services:
     environment:
       POSTGRES_USER: fjm
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-fjm}
-      POSTGRES_DB: fjm
+      # created on a fresh volume; must match the api's DATABASE_URL below
+      POSTGRES_DB: ${DB_NAME:-fjm_demo}
     # host-only: never expose Postgres on the server's public IP
     ports: ["127.0.0.1:5432:5432"]
     volumes: [dbdata:/var/lib/postgresql/data]
