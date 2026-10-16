@@ -66,7 +66,6 @@ networks:
     external: true
 
 volumes:
-  # external: `docker compose down -v` will NOT delete the database (create once: docker volume create app_dbdata)
+  # created by compose on first `up`; careful: `docker compose down -v` deletes the database
   dbdata:
     name: app_dbdata
-    external: true

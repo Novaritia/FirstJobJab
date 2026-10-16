@@ -22,7 +22,6 @@ Plus the keys from `.env.example` (`PII_KEY`, `FILE_KEY`, `IP_HMAC_KEY`, Gemini,
 
 ## 3. Start
 ```sh
-docker volume create app_dbdata   # once
 docker compose --profile full up -d --build
 ```
 `PUBLIC_API_URL` is baked into the web bundle at build time, so after changing it rebuild web: `docker compose --profile full build web`.
