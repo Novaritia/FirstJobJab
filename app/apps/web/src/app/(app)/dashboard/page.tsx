@@ -1,4 +1,5 @@
 "use client";
+import { forecastMonth } from "@/lib/plan";
 import Link from "next/link";
 import dynamic from "next/dynamic";
 import { useState, type ReactNode } from "react";
@@ -48,6 +49,9 @@ export default function Dashboard() {
   const i = pick ?? months.length - 1;
   const month = months[i];
   const prev = months[i - 1];
+  const last = months[months.length - 1];
+  const spentPct = last.income > 0 ? Math.round((last.spend / last.income) * 100) : 0;
+  const fc = forecastMonth(months, today);
 
   // colour follows the category, not its rank: the 5 biggest over all months keep colours 1–5, the rest fold into "อื่น ๆ"
   const totals = new Map<Category, number>();
@@ -57,7 +61,20 @@ export default function Dashboard() {
 
   return (
     <Stagger className="flex flex-col gap-8">
-      {hello}
+      <div className="flex flex-col gap-2">
+        {hello}
+        {/* the one sentence to read first */}
+        <p className="text-lg font-medium sm:text-xl">
+          {monthLabel(last.month)} เหลือ <span className={last.net >= 0 ? "text-success" : "text-danger"}><Money value={last.net} digits={0} /></span>
+          {last.income > 0 && <> · ใช้ไป <span className={cx("num", spentPct > 100 ? "text-danger" : spentPct > 90 ? "text-warning" : "")}>{spentPct}%</span> ของรายรับ</>}
+        </p>
+        {fc && (
+          <p className="text-sm text-muted">
+            คาดว่าสิ้นเดือน {monthLabel(fc.month)} จะเหลือ <span className={cx("num font-semibold", fc.net >= 0 ? "text-text" : "text-danger")}>{baht(fc.net, 0)}</span>{" "}
+            <span className="text-xs">(ประมาณการ{fc.basis === "daily" ? "จากค่าใช้จ่ายต่อวันเดือนนี้" : "จากค่าเฉลี่ยเดือนก่อน ๆ"})</span>
+          </p>
+        )}
+      </div>
       {st && <StreakHero st={st} today={today} />}
 
       <div className="grid gap-8 lg:grid-cols-2">

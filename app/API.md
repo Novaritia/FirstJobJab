@@ -22,7 +22,7 @@ Errors: `{ "error": "message" }` with 4xx/5xx.
 | PUT | /profile/consents | `{purpose: 'planning'|'loan_summary'|'improve', granted: boolean}` | `{ok}` |
 
 ## Uploads → review → confirm
-| POST | /uploads | multipart `file` (PDF) + optional `password` | `{uploadId, bank, period:{start,end}, accountNoMasked, rows: ReviewRow[], check: BalanceCheckResult}` |
+| POST | /uploads | multipart `file` (PDF) + optional `password` | `{uploadId, bank, period:{start,end}, accountNoMasked, rows: ReviewRow[], check: BalanceCheckResult, ocr: boolean}` — scanned (image-only) PDFs are OCR'd (`ocr: true`, ~2–3 s/page, ≤15 pages else 422 too_many_pages); OCR misreads show up as failing rows |
 | POST | /uploads/passbook | multipart repeated `images` (PNG/JPEG passbook page photos, in page order, ≤15 × 10 MB) + optional `bank` (KBANK or BBL, for pages without a logo) | same as POST /uploads + `pages`; `ocr: true`. Rows get `channel: "Passbook"`, no time. Direction from balance delta; first row needs a ยอดยกมา/B/F line to be verifiable. 415 not_an_image, 422 unsupported_format, 409 already_imported (sha256 over page hashes). Pages stored as one AES-GCM blob like PDFs. Then the same PATCH rows / confirm flow; confirm skips rows already imported by date+amount+balance |
 | PATCH | /uploads/:id/rows/:index | `{amount?, direction?, date?, balance?}` (only failing rows) | `{rows, check}` (re-checked) |
 | POST | /uploads/:id/confirm | — | `{imported: number, streak}` — 409 if check still fails |
@@ -30,6 +30,18 @@ Errors: `{ "error": "message" }` with 4xx/5xx.
 
 If PDF is locked and no password given, server tries stored PII (birth date / national ID formats); on failure returns 422 `{error:'password_required'}`.
 `ReviewRow = ParsedRow & {index, ok: boolean, category: Category}`
+
+## Slips (transfer slip images → match or add)
+| Method | Path | Body | Returns |
+|---|---|---|---|
+| POST | /slips | multipart repeated `images` (PNG/JPEG, ≤10 × 10 MB) | `{slips: Slip[]}` — 400 images_required, 415 not_an_image |
+| POST | /slips/:id/confirm | optional fixes `{amount?, date?, time?, description?, category?}` | `{transaction}` (source='slip', verified=false). 409 slip_not_unmatched, 422 slip_incomplete (no amount/date) |
+
+`Slip = {id, amount?, date?, time?, fromName?, toName?, bank?, ref?, qrRef?, matchedTransactionId?, status: 'matched'|'unmatched'|'confirmed', confidence: 0..1}`
+- Read = slip-verify QR (exact ref) + OCR (Paddle sidecar or tesseract) + regex. Web warns when `confidence < 0.9`.
+- `matched`: an existing outgoing tx with same amount + date, time ±5 min (nearest wins) → nothing to add (no double count).
+- Same image (sha256) or same QR ref again → the existing slip is returned, not re-created.
+- Image bytes are never stored (only sha256 + fields). Audit: `slip_upload`, `slip_confirm`.
 
 ## Transactions
 | GET | /transactions?from&to&accountId&q&direction&category&source&minAmount&maxAmount&hidden&limit&offset\|page&sort | — | `{transactions: Tx[], total, accounts: {id, bank, accountNoMasked, accountName}[]}` — see filters below |

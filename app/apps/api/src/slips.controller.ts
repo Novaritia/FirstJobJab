@@ -18,6 +18,22 @@ export const mimeOf = (b: Buffer) =>
   : b[0] === 0xff && b[1] === 0xd8 && b[2] === 0xff ? 'image/jpeg' : null;
 const minutes = (t: string) => +t.slice(0, 2) * 60 + +t.slice(3, 5);
 
+type Row = { id: string; date: string; time: string | null; amount: number };
+export const SLIP_MERGED_NOTE = 'รวมกับรายการใน statement';
+/** Pair new outgoing statement rows with confirmed slip rows: same amount + date, time ±5 min (unknown time = ok), nearest wins, each slip once. */
+export function pairSlipRows(stmt: Row[], slips: Row[]): { slipTxId: string; stmtTxId: string }[] {
+  const free = new Set(slips.map((s) => s.id));
+  const gap = (a: Row, b: Row) => (a.time && b.time ? Math.abs(minutes(a.time) - minutes(b.time)) : 0);
+  return stmt.flatMap((r) => {
+    const best = slips
+      .filter((s) => free.has(s.id) && s.date === r.date && s.amount === r.amount && gap(s, r) <= 5)
+      .sort((a, b) => gap(a, r) - gap(b, r))[0];
+    if (!best) return [];
+    free.delete(best.id);
+    return [{ slipTxId: best.id, stmtTxId: r.id }];
+  });
+}
+
 const Confirm = z.object({ // optional fixes for OCR misreads before saving
   amount: z.number().int().positive().max(1e12).optional(),
   date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),

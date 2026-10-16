@@ -179,14 +179,14 @@ export default function UploadPage() {
             {slips.map((x) => (
               <li key={x.id} className="flex flex-wrap items-center justify-between gap-3 px-5 py-3">
                 <div className="min-w-0">
-                  <p className="num font-semibold">{baht(x.amount)} <span className="font-normal text-muted">· {dateLabel(x.date)}{x.time && ` ${x.time}`}</span></p>
+                  <p className="num font-semibold">{x.amount != null ? baht(x.amount) : <span className="text-warning">อ่านยอดไม่ได้</span>} <span className="font-normal text-muted">{x.date && `· ${dateLabel(x.date)}`}{x.time && ` ${x.time}`}</span></p>
                   <p className="truncate text-sm text-muted">{[x.fromName, x.toName].filter(Boolean).join(" → ")}{x.ref && ` · ref ${x.ref}`}</p>
                   {x.confidence < 0.9 && <p className="text-xs text-warning">อ่านได้ไม่ชัด ({Math.round(x.confidence * 100)}%) ตรวจยอดก่อนยืนยัน</p>}
                 </div>
                 {x.status === "matched" ? (
                   <Badge kind="ok"><CircleCheck aria-hidden size={14} /> ตรงกับรายการใน statement (ไม่นับซ้ำ)</Badge>
-                ) : x.confirmed ? (
-                  <Badge kind="manual"><Hand aria-hidden size={14} /> เพิ่มแล้ว</Badge>
+                ) : x.confirmed || x.status === "confirmed" ? (
+                  <Badge kind="ok"><CircleCheck aria-hidden size={14} /> เพิ่มแล้ว</Badge>
                 ) : (
                   <Button variant="soft" onClick={() => confirmSlip(x.id)}><Hand aria-hidden size={16} /> ยืนยันเพื่อเพิ่มรายการ</Button>
                 )}

@@ -37,8 +37,8 @@ export type DataRow = Record<string, string | number | null>;
 export type ChatReply = { reply: string; data?: DataRow[] };
 export type VoiceReply = ChatReply & { transcript: string; audio?: string };
 export type Slip = {
-  id: string; amount: number; date: string; time?: string; fromName?: string; toName?: string; bank?: string; ref?: string;
-  matchedTransactionId?: string | null; status: "matched" | "unmatched"; confidence: number;
+  id: string; amount?: number; date?: string; time?: string; fromName?: string; toName?: string; bank?: string; ref?: string; qrRef?: string;
+  matchedTransactionId?: string | null; status: "matched" | "unmatched" | "confirmed"; confidence: number;
 };
 export type { GrowthInput, GrowthPoint, TaxResult };
 
@@ -87,6 +87,9 @@ export function errorText(e: unknown): string {
   if (e instanceof ApiError) {
     if (e.status === 401) return "อีเมลหรือรหัสผ่านไม่ถูกต้อง";
     if (e.message === "unsupported_format") return "อ่านไฟล์นี้ไม่ได้ — ตอนนี้รองรับ statement KBank และ Bangkok Bank";
+    if (e.message === "slip_incomplete") return "อ่านยอดหรือวันที่จากสลิปไม่ได้ เพิ่มเป็นรายการเองแทนได้";
+    if (e.message === "slip_not_unmatched") return "สลิปนี้เพิ่มหรือจับคู่ไปแล้ว";
+    if (e.message === "not_an_image") return "รองรับเฉพาะรูป JPG/PNG";
     if (e.message === "not_an_image") return "รองรับเฉพาะรูป JPG/PNG";
     if (e.message === "already_imported") return "ไฟล์นี้นำเข้าไปแล้ว";
     return e.message;

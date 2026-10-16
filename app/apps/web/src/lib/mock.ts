@@ -159,6 +159,28 @@ export async function mockFetch(path: string, init: RequestInit): Promise<Respon
     return ok({ ...profile, email: user.email, nationalIdMasked: null, hasNationalId: false });
   }
   if (p === "/profile/pii") { user.hasPii = true; return ok({ ok: true }); }
+  if (p === "/profile/reconsent") return ok({ ok: true });
+  if (p === "/account" && method === "DELETE") {
+    if (body?.password !== "demo1234") return err(401, "wrong_password");
+    loggedIn = false;
+    return ok({ ok: true });
+  }
+  if (p === "/security/logins") {
+    const logins = [
+      { at: "2026-10-16T08:00:00Z", success: true, ip: "171.96.12.40", device: "Windows · Chrome", location: "Bangkok, TH", current: true },
+      { at: "2026-10-15T21:12:00Z", success: false, ip: "203.0.113.9", device: "Linux · Firefox", location: "Singapore, SG", current: false },
+      { at: "2026-10-14T07:30:00Z", success: true, ip: "171.96.12.41", device: "iOS · Safari", location: "Bangkok, TH", current: false },
+    ];
+    return ok({ logins, total: logins.length });
+  }
+  if (p === "/security/sessions") {
+    return ok({ sessions: [
+      { id: "s1", createdAt: "2026-10-16T08:00:00Z", lastSeenAt: "2026-10-16T09:50:00Z", device: "Windows · Chrome", location: "Bangkok, TH", current: true },
+      { id: "s2", createdAt: "2026-10-14T07:30:00Z", lastSeenAt: "2026-10-15T12:00:00Z", device: "iOS · Safari", location: "Bangkok, TH", current: false },
+    ] });
+  }
+  if (p === "/security/sessions/revoke-others") return ok({ ok: true, revoked: 1 });
+  if (p.startsWith("/security/sessions/")) return ok({ ok: true });
   if (p === "/profile/consents" && method === "GET") return ok({ consents });
   if (p === "/profile/consents") {
     const c = consents.find((x) => x.purpose === body.purpose);

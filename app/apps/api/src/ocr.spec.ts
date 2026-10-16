@@ -1,6 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { parseSlipQr, parseSlipText, readSlip } from './ocr.js';
+import { pairSlipRows } from './slips.controller.js';
 
 const SLIPS = join(__dirname, '../../../mock-data/slips');
 
@@ -38,4 +39,19 @@ describe('readSlip (real OCR on mock)', () => {
     expect(r).toMatchObject(want);
     expect(r.confidence).toBeGreaterThan(0.7);
   }, 60_000);
+});
+
+describe('pairSlipRows', () => {
+  it('pairs nearest slip within ±5 min, each slip once', () => {
+    const stmt = [
+      { id: 's1', date: '2026-09-12', time: '14:30', amount: 35000 },
+      { id: 's2', date: '2026-09-12', time: '14:33', amount: 35000 },
+      { id: 's3', date: '2026-09-20', time: '16:45', amount: 125000 },
+    ];
+    const slips = [
+      { id: 'a', date: '2026-09-12', time: '14:32', amount: 35000 },
+      { id: 'b', date: '2026-09-20', time: '16:55', amount: 125000 }, // 10 min off
+    ];
+    expect(pairSlipRows(stmt, slips)).toEqual([{ slipTxId: 'a', stmtTxId: 's1' }]);
+  });
 });

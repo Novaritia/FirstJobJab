@@ -14,7 +14,7 @@ import { AuthGuard, UserId, type Req } from './auth.js';
 import { decryptStr, encrypt, envKey, sha256 } from './crypto.js';
 import { extractPdfItems, PdfPasswordError, renderPdfPages, type PdfItem } from './pdf.js';
 import { ocrPages } from './ocr.js';
-import { mimeOf } from './slips.controller.js';
+import { mimeOf, pairSlipRows, SLIP_MERGED_NOTE } from './slips.controller.js';
 import { categorize } from './categorize.js';
 import { StatsService } from './stats.service.js';
 import { parse } from './validation.js';
@@ -223,11 +223,28 @@ export class UploadsController {
           category: parsed.categories[i], source: 'statement', verified: true,
         }];
       });
-      await tx.transaction.createMany({ data });
-      return data.length;
+      const created = await tx.transaction.createManyAndReturn({ data, select: { id: true, date: true, time: true, amount: true, direction: true } });
+      // a slip confirmed earlier for the same transfer must not count twice: hide it, link it to the statement row
+      const out = created.filter((r) => r.direction === 'out');
+      const slipRows = out.length ? await tx.transaction.findMany({
+        where: { userId, source: 'slip', hidden: false, direction: 'out', date: { in: [...new Set(out.map((r) => r.date))] } },
+        select: { id: true, date: true, time: true, amount: true, note: true },
+      }) : [];
+      const pairs = pairSlipRows(out, slipRows);
+      for (const p of pairs) {
+        const old = slipRows.find((r) => r.id === p.slipTxId)!;
+        await tx.transaction.update({ where: { id: p.slipTxId }, data: { hidden: true, note: SLIP_MERGED_NOTE } });
+        await tx.edit.createMany({ data: [
+          { userId, transactionId: p.slipTxId, field: 'hidden', oldValue: 'false', newValue: 'true' },
+          { userId, transactionId: p.slipTxId, field: 'note', oldValue: old.note, newValue: SLIP_MERGED_NOTE },
+        ] });
+        await tx.slip.updateMany({ where: { userId, matchedTransactionId: p.slipTxId }, data: { matchedTransactionId: p.stmtTxId } });
+      }
+      return { count: data.length, pairs };
     });
+    for (const p of imported.pairs) await this.audit.log(req, 'slip_merged', { target: p.slipTxId, after: { statementTransactionId: p.stmtTxId } });
     await this.stats.markOwnTransfers(userId);
-    await this.audit.log(req, 'confirm_import', { target: id, after: { imported } });
-    return { imported, streak: await this.stats.streak(userId) };
+    await this.audit.log(req, 'confirm_import', { target: id, after: { imported: imported.count } });
+    return { imported: imported.count, streak: await this.stats.streak(userId) };
   }
 }

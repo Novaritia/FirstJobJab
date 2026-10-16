@@ -1,69 +1,51 @@
-# u-hackathon
+# FirstJobJab
 
-Workspace for **U-Hackathon 2026** (hosted by u-topia at Flow Summit, Avani Sukhumvit Bangkok).
-Theme: *The future of AI and Finance*.
+**Your bank statements, turned into a money plan — built for Thai first jobbers.**
 
-## ❌ Dropped (2026-10-15): Univerxal — idea still open, see `01-brainstorm/ideas.md`
-**"Your AI money assistant — automatic books and every money task, for everyone who earns outside a payslip."** For people and merchants **without a registered company**, easy enough for non-tech users (connect once, nothing to type). Webhooks, LINE bot (slips, voice notes) and uploads → automatic books, analysis, forecast and personal tax for merchants and individuals; a bank-ready loan package carried to lenders through u-topia's identity and compliance layer.
-Full idea: [`01-brainstorm/idea-univerxal.md`](01-brainstorm/idea-univerxal.md)
+U-Hackathon 2026 (u-topia · Flow Summit Bangkok) · AI track
 
-## Key facts
+First jobbers get a salary, but nobody teaches them where it goes, how tax works, or how to get ready for their first car or condo loan. FirstJobJab reads the statements they already have, checks every number, and turns them into a plan, with a monthly 🔥 streak (like Duolingo) so the history never has gaps.
+
+## What it does
 
 | | |
 |---|---|
-| Build | Thu 15 Oct 2026 11:30 → **Fri 16 Oct 14:00** (ICT, UTC+7). Hall closes 18:00, no overnight. |
-| Tracks | **AI** (AI tooling, no Web3 needed) or **Web3** (deployable on-chain) |
-| Team | 1–4 people. New builds only; pre-research/planning allowed. |
-| Submit | https://hub.team1.network/ — public repo, demo site showing the real product, deck link (anyone with link can view) |
+| **Upload, any format** | KBank / Bangkok Bank e-statement PDFs (auto-unlocked), scanned PDFs, passbook photos and transfer slips. Thai OCR (PaddleOCR PP-OCRv5) for images |
+| **Every row balance-checked** | `previous balance ± amount = balance` on every row. ✅ rows are proven; ⚠️ rows (misreads) are the only ones you can edit, and only to a value that reconciles. Every edit is logged |
+| **Slips never double-count** | Slips are matched to statement rows; unmatched slips need a ✋ confirm |
+| **Dashboard** | Where the salary went, by category; 6-month trend; end-of-month forecast |
+| **Plan** | Growth projection with sliders; salary split (spend / emergency / invest) from real spending |
+| **Tax** | Thai personal income tax estimate with steps, plus a what-if calculator ("deduct ฿X more → save ฿Y") |
+| **Loan-ready** | Continuous months of verified history (x/6) and a rule-of-thumb max installment |
+| **Assistant** | Ask anything about your own account, by **chat** (Gemini with tools scoped to your data) or **voice** (ElevenLabs speech-to-text → answer → text-to-speech) |
+| **Monthly streak** | Upload after payday, keep the streak; missing or expiring months are flagged |
 
-### Judging
+## Security & privacy
+- Passwords hashed with argon2id. ID number, birth date, uploaded files and login IPs encrypted with AES-256-GCM. PDF passwords are never stored.
+- Audit log is hash-chained and append-only (a DB trigger blocks UPDATE/DELETE).
+- Login history (IP, device, approx. location) and active sessions are visible to the user; any session can be revoked.
+- Terms and privacy are accepted at sign-up and re-asked only when the version changes. Optional PDPA consents can be withdrawn anytime. Account deletion wipes the data and keeps only anonymised legal records.
+- Only masked aggregates and descriptions reach the LLM, never ID or account numbers.
 
-| Criterion | Weight |
-|---|---|
-| App execution | 40% |
-| Practicality | 40% |
-| Usability & design | 10% |
-| Innovation & ecosystem (ElevenLabs / Avalanche) | 5% |
-| U-Bot integration (core + working) | 5% |
+## Stack
+pnpm monorepo in [`app/`](app/): **Next.js 16** (web) · **NestJS 12 + Fastify** (API) · **Prisma 7 + PostgreSQL** · `packages/shared` (pure TypeScript parser, balance check, tax and growth engines, shared by API and web) · **PaddleOCR** sidecar (Python) · **Gemini** (chat) · **ElevenLabs** (voice) · everything in **Docker**.
 
-### Integrations
+## Run it
+```sh
+cd app
+cp .env.example .env            # fill the keys (see comments)
+docker compose --profile full up -d --build
+# web http://localhost:3000 · api http://localhost:4000
+```
+Demo account: `demo@firstjobjab.app` / `demo1234`. Mock statements are in [`app/mock-data/`](app/mock-data/) (password `14031999`): upload `KBANK_2026-09.pdf` to see the streak reach 6/6, and `BROKEN_KBANK_2026-06.pdf` to see ⚠️ rows.
+Local dev without Docker: see [`app/HANDOFF.md`](app/HANDOFF.md).
 
-- **U-Bot** — skipped for now (no API documented).
-- **Claude API** — chat/slip extraction and insights.
-- **ElevenLabs** — AI voice (TTS, STT, conversational agents).
-- **Avalanche (AVAX)** — not used (AI track chosen).
-- ~~Tokenomist~~ — not used.
+## Docs
+- Pages and what each does: [`app/docs/pages.md`](app/docs/pages.md)
+- HTTP API contract: [`app/API.md`](app/API.md)
+- OCR research and choice: [`app/docs/ocr.md`](app/docs/ocr.md)
+- Product spec: [`01-brainstorm/idea-first-jobber-money.md`](01-brainstorm/idea-first-jobber-money.md) · Tech plan: [`03-tech/tech-plan-first-jobber.md`](03-tech/tech-plan-first-jobber.md)
 
-## Folder map
-
-| Folder | Purpose |
-|---|---|
-| `00-input/` | Reference material from organisers and sponsors (read-only) |
-| `01-brainstorm/` | Candidate ideas and scoring against the real rubric |
-| `02-business/` | Problem, users, business model, competitors, market |
-| `03-tech/` | Architecture, U-Bot / ElevenLabs / Avalanche notes, stack, `.env.example` |
-| `04-plan/` | Timeline, tasks, roles, decision log |
-| `05-pitch/` | Deck outline, pitch script, demo script |
-| `app/` | The website code |
-| `docs/` | Design spec and implementation plan for this workspace |
-
-## How to work
-
-1. Drop references into `00-input/`.
-2. Score ideas in `01-brainstorm/scoring.md`, record the pick in `04-plan/decisions.md`.
-3. Fill `02-business/` and pick a stack in `03-tech/stack.md`.
-4. Build in `app/` — get a working demo end-to-end first, polish after.
-5. Write the deck and rehearse the demo in `05-pitch/`.
-
-## Status
-
-- [x] References collected (U-Bot guide, ElevenLabs hacker guide)
-- [ ] Idea chosen
-- [x] Track chosen: **AI**
-- [x] Stack chosen (Next.js + Claude API + TS engines)
-- [ ] App scaffolded
-- [ ] Demo dataset (fake Thai chat + slips) ready
-- [ ] (Stretch) ElevenLabs Monday CFO call
-- [ ] Demo deployed
-- [ ] Deck done, demo rehearsed
-- [ ] Submitted before Fri 14:00
+## Honest limits
+- Bank layouts are modelled on our own mock statements; real KBank/BBL files still need testing.
+- Tax and loan figures are estimates, not advice. No payment integration yet (pricing shown on the landing page).

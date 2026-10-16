@@ -8,6 +8,7 @@ import { ApiError, MOCK, api, type User } from "@/lib/api";
 import { Loading, cx } from "@/components/ui";
 import { UserCtx } from "@/components/user";
 import { Initial } from "@/components/session";
+import { Reconsent } from "@/components/Reconsent";
 import { StreakBadge } from "@/components/StreakTrack";
 
 const GROUPS = [
@@ -92,6 +93,7 @@ export default function AppLayout({ children }: LayoutProps<"/">) {
         </header>
         <main id="main" className="mx-auto w-full max-w-6xl flex-1 px-4 pb-24 pt-6 sm:px-6 md:pb-10 lg:px-8 lg:pt-8">
           {user ? <UserCtx.Provider value={user}>{children}</UserCtx.Provider> : <Loading label="กำลังตรวจสอบการเข้าสู่ระบบ…" />}
+          {user?.needsReconsent && !path.startsWith("/settings") && <Reconsent onDone={() => setUser({ ...user, needsReconsent: false })} />}
         </main>
       </div>
 
