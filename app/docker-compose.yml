@@ -18,19 +18,20 @@ services:
     build: { context: ., target: api }
     container_name: firstjobjab-api
     restart: unless-stopped
-    # Nginx Proxy Manager reaches it over the shared network as firstjobjab-api:4000
+    # Nginx Proxy Manager reaches it over the shared network as firstjobjab-api:9900
     networks: [default, proxy]
     env_file: .env
     environment:
       # same DB as native dev (fjm_demo); set DB_NAME in .env to use another DB
       DATABASE_URL: postgresql://fjm:${POSTGRES_PASSWORD:-fjm}@db:5432/${DB_NAME:-fjm_demo}
       NODE_ENV: production
+      API_PORT: 9900
       OCR_URL: http://ocr:8765
-      WEB_ORIGIN: ${WEB_ORIGIN:-http://localhost:3000}
+      WEB_ORIGIN: ${WEB_ORIGIN:-http://localhost:9800}
       # proxy hops in front of the api: 0 = none, 1 = proxy manager, 2 = Cloudflare + proxy manager
       TRUST_PROXY: ${TRUST_PROXY:-0}
     # BIND_IP=127.0.0.1 (default) keeps it reachable only via the proxy manager / localhost; 0.0.0.0 to open on LAN
-    ports: ["${BIND_IP:-127.0.0.1}:4000:4000"]
+    ports: ["${BIND_IP:-127.0.0.1}:9900:9900"]
     volumes: ["./apps/api/uploads:/repo/apps/api/uploads"]
     depends_on: { db: { condition: service_healthy }, ocr: { condition: service_started } }
     profiles: [full]
@@ -46,12 +47,14 @@ services:
       context: .
       target: web
       # baked into the browser bundle at build time: rebuild web after changing it
-      args: { NEXT_PUBLIC_API_URL: "${PUBLIC_API_URL:-http://localhost:4000}" }
+      args: { NEXT_PUBLIC_API_URL: "${PUBLIC_API_URL:-http://localhost:9900}" }
     container_name: firstjobjab-web
     restart: unless-stopped
-    # Nginx Proxy Manager reaches it over the shared network as firstjobjab-web:3000
+    # Nginx Proxy Manager reaches it over the shared network as firstjobjab-web:9800
     networks: [default, proxy]
-    ports: ["${BIND_IP:-127.0.0.1}:3000:3000"]
+    environment:
+      PORT: 9800 # next start
+    ports: ["${BIND_IP:-127.0.0.1}:9800:9800"]
     depends_on: [api]
     profiles: [full]
 
