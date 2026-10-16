@@ -14,8 +14,10 @@ export async function createApp() {
   for (const k of ['PII_KEY', 'FILE_KEY', 'IP_HMAC_KEY'] as const) envKey(k); // fail fast on missing keys
   // TRUST_PROXY = number of proxy hops in front (1 = proxy manager, 2 = Cloudflare + proxy manager). A hop count, not `true`:
   // trusting every hop would let a client-sent X-Forwarded-For spoof req.ip (the rate-limit key)
+  // (the adapter's type has no number form, so pass the trust function proxy-addr compiles a hop count into)
   const hops = Number(process.env.TRUST_PROXY ?? 0);
-  const app = await NestFactory.create<NestFastifyApplication>(AppModule, new FastifyAdapter({ trustProxy: hops > 0 ? hops : false, bodyLimit: 1024 * 1024 }), {
+  const trustProxy = hops > 0 ? (_addr: string, i: number) => i < hops : false;
+  const app = await NestFactory.create<NestFastifyApplication>(AppModule, new FastifyAdapter({ trustProxy, bodyLimit: 1024 * 1024 }), {
     logger: ['error', 'warn', 'log'],
   });
   await app.register(cookie);
