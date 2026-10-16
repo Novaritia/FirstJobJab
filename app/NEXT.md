@@ -13,7 +13,8 @@
 - Web agent อาจยังมีงาน background ค้าง — เช็ค `git status` ก่อนแก้ไฟล์ web
 
 ## ต้องทำ (เรียงตามลำดับ)
-1. **ปิดงานที่ค้าง**
+> ✅ 12:36 (PC #2): ข้อ 1 ครบ (api 44 unit + 4 e2e, web lint/build, curl flow ผ่าน) + ข้อ 3 ครบ (backup แล้ว; demo มีแค่ KBANK+BBL เม.ย.–ส.ค., 🔥10, 5/6). PC นี้: `.env` สร้างใหม่ (ยังไม่มี GEMINI key), ไม่มี OCR container (ใช้ tesseract)
+1. ✅ **ปิดงานที่ค้าง**
    - เพิ่มแถวใน `API.md` ส่วน Uploads: `| GET | /uploads/:id | — | pending only: reopen review, same shape as POST /uploads (404 not_found, 409 already_confirmed) |`
    - `pnpm --filter api build && pnpm --filter api test && pnpm --filter api test:e2e`
    - `pnpm --filter web lint && pnpm --filter web build`
@@ -22,7 +23,7 @@
    - หลังทดสอบ: คืน demo ให้มีแค่ เม.ย.–ส.ค. (เดือน 9 เก็บไว้ upload สด) — ยกเลิก/ลบ upload เดือน 9 ที่สร้างระหว่างทดสอบ
    - commit + push (ห้าม commit `real-samples/`, `backups/`, `.env`, `*.log`, `*.err`)
 2. **ไฟล์จริงของผู้ใช้**: ถ้ามีไฟล์ใน `app/real-samples/` (gitignored, ห้ามออกนอกเครื่อง/ห้ามใส่ใน test/mock/docs) → fit parser KBank + generic ให้แถวผ่าน ✅ ทั้งหมด รายงานแค่โครงสร้าง
-3. **ล้าง demo ก่อน demo จริง**: บัญชี "กสิกรไทย unknown" ใน PDF export (มาจากไฟล์เทส) — ตรวจ `accounts` ของ demo user แล้วลบที่ไม่ได้มาจาก preload; `sh backup-db.sh` ก่อนลบ
+3. ✅ **ล้าง demo ก่อน demo จริง**: บัญชี "กสิกรไทย unknown" ใน PDF export (มาจากไฟล์เทส) — ตรวจ `accounts` ของ demo user แล้วลบที่ไม่ได้มาจาก preload; `sh backup-db.sh` ก่อนลบ
 4. **ทดสอบในเบราว์เซอร์จริง (ยังไม่มีใครคลิกจริง)**: login demo → upload review (⚠️ จาก `BROKEN_KBANK_2026-06.pdf`) → confirm → 🔥 navbar ขึ้นทันที → ประวัติการอัปโหลด ยกเลิก/ลบ → export (ชื่อไฟล์มีช่วงวันที่/เวลา/ครั้งที่) → ผู้ช่วยแชท → onboarding วันเกิด (ลอง 2542 ต้องเตือน ค.ศ.)
 5. **ส่ง hackathon** (ก่อน 14:00): demo script (ไฟล์ `../05-pitch/demo-script.md` ยังเป็นของไอเดียเก่า ChatCFO — เขียนใหม่ตาม flow ข้อ 4) · pitch deck — **ผู้ใช้สั่งให้หยุดไว้ก่อน ห้ามทำจนกว่าจะสั่ง** (มี artifact เริ่มไว้ https://claude.ai/artifact/UViuJRTVc1Zp78qcrW3be1 มีแค่ cover)
 6. **Docker ให้ใช้ข้อมูลเดียวกับ dev** (ถ้าจะ demo ผ่าน Docker): compose `api` ใช้ DB `fjm` ไม่ใช่ `fjm_demo` และ uploads เป็น volume แยก — เปลี่ยน `DATABASE_URL` เป็น `fjm_demo` + mount `./apps/api/uploads`; ใส่ `OCR_URL=http://ocr:8765` ใน compose; image ใหญ่ ~3.2GB (ลดทีหลังได้)
