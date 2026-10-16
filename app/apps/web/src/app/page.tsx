@@ -75,18 +75,19 @@ export default function Landing() {
           </Loop>
         </div>
 
-        {/* the hook: upload every month, keep the streak */}
+        {/* the hook: every update +1 🔥, no maximum; out after 30 days */}
         <section id="streak" aria-labelledby="streak-t" className="border-b border-line bg-[color:var(--lp-tint)]">
           <div className="mx-auto grid max-w-6xl gap-10 px-4 py-14 sm:px-6 md:grid-cols-2 md:py-20">
             <div>
-              <h2 id="streak-t" className="text-2xl font-bold">ส่งทุกเดือน เก็บ streak</h2>
-              <p className="mt-2 max-w-md text-muted">เหมือนเก็บวันต่อเนื่องในแอปเรียนภาษา ส่ง statement หลังเงินเดือนเข้าทุกเดือน ครบ 6 เดือนติดกันคือหลักฐานรายได้ที่ธนาคารอยากเห็น</p>
+              <h2 id="streak-t" className="text-2xl font-bold">อัปเดตบ่อย ไฟยิ่งโต</h2>
+              <p className="mt-2 max-w-md text-muted">ทุกครั้งที่อัปโหลด statement สลิป หรือสมุดบัญชีที่มีรายการใหม่ ไฟ +1 ไม่มีเพดาน แค่อัปเดตอย่างน้อยทุก 30 วัน ไม่งั้นไฟดับ ส่วนประวัติต่อเนื่อง 6 เดือนคือหลักฐานรายได้ที่ธนาคารอยากเห็นตอนยื่นกู้</p>
               <div className="mt-6 rounded-lg border border-line bg-surface p-4 shadow-card sm:p-5">
                 <p className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
-                  <span className="font-semibold"><Flame /> <span className="num">5</span>/6 เดือนติดกัน</span>
-                  <span className="text-sm text-muted">อีก 1 เดือนพร้อมยื่นกู้</span>
+                  <span className="text-2xl font-semibold"><Flame /> <span className="num">23</span></span>
+                  <span className="text-sm text-muted">อัปเดตครั้งถัดไปภายใน <span className="num">18</span> วัน ไม่งั้นไฟดับ</span>
                 </p>
-                <Reveal className="mt-4"><StreakTrack months={EXAMPLE_TRACK} due={5} /></Reveal>
+                <p className="mt-4 text-sm font-medium">ประวัติต่อเนื่อง <span className="num">5</span>/6 เดือน · อีก 1 เดือนพร้อมยื่นกู้</p>
+                <Reveal className="mt-2"><StreakTrack months={EXAMPLE_TRACK} due={5} /></Reveal>
                 <p className="mt-3 text-right text-xs text-muted">ข้อมูลตัวอย่าง (สมมติ)</p>
               </div>
             </div>

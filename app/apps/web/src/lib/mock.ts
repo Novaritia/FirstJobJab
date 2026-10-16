@@ -67,11 +67,16 @@ function summary(months: number) {
   };
 }
 
-let streakCurrent = 4;
-const streak = () => ({
-  current: streakCurrent, best: Math.max(streakCurrent, 4),
-  months: ["2026-04", ...MONTHS].map((month) => ({ month, covered: month !== "2026-04" || streakCurrent > 4 })),
-  missing: streakCurrent > 4 ? [] : ["2026-04"], expiringSoon: streakCurrent > 4 ? [] : ["2026-04"],
+let streakCurrent = 4; // coverage months
+let fire = 12; // 🔥: +1 per update, no maximum
+const streak = (gained = 0) => ({
+  current: fire, best: Math.max(fire, 12), lastUpdateAt: new Date().toISOString(), expiresAt: new Date(Date.now() + 30 * 86400_000).toISOString(),
+  daysLeft: gained ? 30 : 6, updatesThisMonth: 3 + gained, recent: [], gained,
+  coverage: {
+    continuousMonths: streakCurrent,
+    months: ["2026-04", ...MONTHS].map((month) => ({ month, covered: month !== "2026-04" || streakCurrent > 4 })),
+    missing: streakCurrent > 4 ? [] : ["2026-04"], expiringSoon: streakCurrent > 4 ? [] : ["2026-04"],
+  },
 });
 
 // Upload: April statement with two rows whose amounts were mis-read.
@@ -132,8 +137,8 @@ function chat(q: string) {
   const m = s.months[0];
   if (/มากสุด|อะไร/.test(q)) return { reply: `เดือน ${m.month} ใช้กับค่าเช่ามากสุด รองลงมาคือครอบครัวและผ่อนบัตร`, data: s.topSpend.map((t) => ({ หมวด: t.category, จำนวน: `฿${(t.amount / 100).toLocaleString("th-TH")}` })) };
   if (/ภาษี/.test(q)) return { reply: "ปีนี้น่าจะเสียภาษีประมาณ ฿850 (ประมาณการ ไม่ใช่คำแนะนำทางภาษี)" };
-  if (/กู้/.test(q)) return { reply: `ส่ง statement ต่อเนื่อง ${streakCurrent}/6 เดือน ผ่อนได้ไม่เกินประมาณ ฿11,200/เดือน` };
-  if (/streak|สตรีค/i.test(q)) return { reply: `streak ตอนนี้ ${streakCurrent} เดือน ยังขาด เม.ย. 69 รีบอัปโหลดก่อนธนาคารลบ` };
+  if (/กู้/.test(q)) return { reply: `ประวัติ statement ต่อเนื่อง ${streakCurrent}/6 เดือน ผ่อนได้ไม่เกินประมาณ ฿11,200/เดือน` };
+  if (/streak|สตรีค|ไฟ/i.test(q)) return { reply: `🔥 ${fire} อัปเดตครั้งถัดไปภายใน 6 วัน ไม่งั้นไฟดับ` };
   return { reply: `เดือนนี้ใช้ไป ฿${(m.spend / 100).toLocaleString("th-TH")} จากเงินเข้า ฿${(m.income / 100).toLocaleString("th-TH")}`, data: [{ รายการ: "เงินเข้า", จำนวน: m.income / 100 }, { รายการ: "ใช้ไป", จำนวน: m.spend / 100 }, { รายการ: "เหลือ", จำนวน: m.net / 100 }] };
 }
 
@@ -211,8 +216,9 @@ export async function mockFetch(path: string, init: RequestInit): Promise<Respon
     const u = uploads[m[1]];
     if (u.check.failCount) return err(409, "balance_check_failed");
     streakCurrent += 1;
+    fire += 1;
     audit.push({ action: "confirm_import", target: `upload:${u.uploadId}`, at: now() });
-    return ok({ imported: u.rows.length, streak: streak() });
+    return ok({ imported: u.rows.length, streak: streak(1) });
   }
 
   if (p === "/transactions/export.csv") {

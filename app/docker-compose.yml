@@ -40,5 +40,8 @@ services:
     profiles: [full]
 
 volumes:
+  # external: `docker compose down -v` will NOT delete the database (create once: docker volume create app_dbdata)
   dbdata:
+    name: app_dbdata
+    external: true
   uploads:

@@ -13,7 +13,7 @@ import { ButtonLink, Card, ErrorNote, cx, useApi } from "@/components/ui";
 import { useUser } from "@/components/user";
 import { VoiceSummary } from "@/components/VoiceSummary";
 import { Flame, LiveDot, Money, Stagger } from "@/components/motion";
-import { StreakTrack } from "@/components/StreakTrack";
+import { FireDeadline, StreakTrack } from "@/components/StreakTrack";
 
 // recharts loads after the streak hero and KPI tiles have painted
 const ChartSkel = ({ round }: { round?: boolean }) =>
@@ -75,7 +75,7 @@ export default function Dashboard() {
           </p>
         )}
       </div>
-      {st && <StreakHero st={st} today={today} />}
+      {st && <StreakHero st={st} />}
 
       <div className="grid gap-8 lg:grid-cols-2">
         <SpendSection month={month} palette={palette}
@@ -126,48 +126,45 @@ function Section({ id, title, sub, action, children }: { id: string; title: stri
   );
 }
 
-/** 1. The hook: streak first. Current run, the month due with its deadline, progress to loan-ready, one-tap upload. */
-function StreakHero({ st, today }: { st: Streak; today: Date }) {
-  const track = st.months.slice(-6);
+/** 1. The hook: the 🔥 streak (no maximum, +1 per update, out after 30 days), then history coverage for loan-ready. */
+function StreakHero({ st }: { st: Streak }) {
+  const cov = st.coverage;
+  const track = cov.months.slice(-6);
   const last = track.at(-1);
   const due = last && !last.covered ? track.length - 1 : undefined;
-  const daysLeft = new Date(today.getFullYear(), today.getMonth() + 1, 0).getDate() - today.getDate() + 1;
-  const older = st.missing.filter((m) => m !== last?.month);
-  const run = Math.min(st.current, 6);
+  const older = cov.missing.filter((m) => m !== last?.month);
+  const run = Math.min(cov.continuousMonths, 6);
   const ready = run >= 6;
   return (
     <section data-rise aria-labelledby="streak-t" className="grid gap-5 rounded-md border-2 border-primary/30 bg-surface p-5 sm:p-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.3fr)] lg:items-center lg:gap-8">
       <div className="flex flex-col gap-3">
-        <h2 id="streak-t" className="inline-flex items-center gap-1 text-sm font-semibold text-muted"><Flame /> สตรีคอัปโหลดรายเดือน</h2>
+        <h2 id="streak-t" className="inline-flex items-center gap-1 text-sm font-semibold text-muted"><Flame /> ไฟอัปเดตข้อมูล</h2>
         <p className="flex items-baseline gap-2">
-          <span className="text-4xl"><Flame /></span>
-          <span className="num text-4xl font-bold">{st.current}<span className="text-xl font-medium text-muted">/6</span></span>
-          <span className="font-medium">เดือนติดกัน</span>
+          <span className="text-5xl"><Flame /></span>
+          <span className={cx("num text-5xl font-bold", st.current === 0 && "text-muted")}>{st.current}</span>
         </p>
-        <p className="text-sm text-muted">อัปโหลด statement ทุกเดือนให้ครบ 6 เดือนติดกัน ธนาคารจะเห็นรายได้สม่ำเสมอ ใช้ยื่นกู้ได้</p>
-        <div>
-          <div className="mb-1 flex justify-between text-sm">
-            <span className="inline-flex items-center gap-1 font-medium">{ready ? <>พร้อมยื่นกู้แล้ว <CircleCheck aria-hidden size={16} className="text-success" /></> : `อีก ${6 - run} เดือน พร้อมยื่นกู้`}</span>
-            <span className="num text-muted">{run}/6</span>
-          </div>
-          <div role="progressbar" aria-label="ความพร้อมยื่นกู้" aria-valuemin={0} aria-valuemax={6} aria-valuenow={run} className="h-2 overflow-hidden rounded-sm bg-subtle">
-            <span className="block h-full rounded-sm bg-primary transition-[width] duration-700" style={{ width: `${(run / 6) * 100}%` }} />
-          </div>
-          {st.best > st.current && <p className="mt-1 text-xs text-muted">สถิติสูงสุดของคุณ {st.best} เดือน</p>}
-        </div>
+        <FireDeadline s={st} />
+        <p className="text-sm text-muted">ทุกครั้งที่อัปโหลด statement สลิป หรือสมุดบัญชีที่มีรายการใหม่ ไฟ +1 ไม่มีเพดาน อัปบ่อยไฟยิ่งโต
+          {st.updatesThisMonth > 0 && <> · เดือนนี้ +<span className="num">{st.updatesThisMonth}</span></>}
+          {st.best > st.current && <> · สูงสุด <span className="num">{st.best}</span></>}</p>
+        <ButtonLink href="/upload" className="w-fit max-sm:w-full lg:min-h-11"><Upload aria-hidden size={16} /> อัปเดตข้อมูล</ButtonLink>
       </div>
       <div className="flex flex-col gap-4">
-        <StreakTrack months={track.map((m) => ({ label: short(m.month), covered: m.covered }))} due={due} />
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <div className="text-sm">
-            <p className={cx("font-semibold", due !== undefined && daysLeft <= 7 ? "text-warning" : "text-text")}>
-              {due !== undefined
-                ? <>อัปโหลดเดือนนี้: statement {short(last!.month)} · เหลือ <span className="num">{daysLeft}</span> วัน</>
-                : <span className="inline-flex items-center gap-1">เดือนนี้ส่งแล้ว <PartyPopper aria-hidden size={16} className="text-success" /> เดือนถัดไปอัปโหลดได้ต้นเดือนหน้า</span>}
-            </p>
-            {older.length > 0 && <p className="mt-0.5 flex items-start gap-1 text-xs text-warning"><TriangleAlert aria-hidden size={14} className="mt-px shrink-0" /><span>ยังขาด {older.map(monthLabel).join(", ")}{st.expiringSoon.length > 0 && " ใกล้หมดอายุที่ธนาคาร"}</span></p>}
+        <div>
+          <div className="mb-1 flex justify-between text-sm">
+            <span className="inline-flex items-center gap-1 font-medium">{ready ? <>ประวัติครบ 6 เดือน พร้อมยื่นกู้ <CircleCheck aria-hidden size={16} className="text-success" /></> : `ประวัติต่อเนื่อง อีก ${6 - run} เดือนพร้อมยื่นกู้`}</span>
+            <span className="num text-muted">{run}/6</span>
           </div>
-          <ButtonLink href="/upload" className="shrink-0 max-sm:w-full lg:min-h-11"><Upload aria-hidden size={16} /> อัปโหลด statement</ButtonLink>
+          <div role="progressbar" aria-label="ประวัติต่อเนื่องสำหรับยื่นกู้" aria-valuemin={0} aria-valuemax={6} aria-valuenow={run} className="h-2 overflow-hidden rounded-sm bg-subtle">
+            <span className="block h-full rounded-sm bg-primary transition-[width] duration-700" style={{ width: `${(run / 6) * 100}%` }} />
+          </div>
+        </div>
+        <StreakTrack months={track.map((m) => ({ label: short(m.month), covered: m.covered }))} due={due} />
+        <div className="text-sm">
+          {due !== undefined
+            ? <p className="font-semibold">ยังไม่มี statement {short(last!.month)}</p>
+            : <p className="inline-flex items-center gap-1 font-semibold">ประวัติล่าสุดครบแล้ว <PartyPopper aria-hidden size={16} className="text-success" /></p>}
+          {older.length > 0 && <p className="mt-0.5 flex items-start gap-1 text-xs text-warning"><TriangleAlert aria-hidden size={14} className="mt-px shrink-0" /><span>ยังขาด {older.map(monthLabel).join(", ")}{cov.expiringSoon.length > 0 && " ใกล้หมดอายุที่ธนาคาร"}</span></p>}
         </div>
       </div>
     </section>
@@ -333,7 +330,7 @@ function NextSteps({ st, pending }: { st?: Streak; pending: number }) {
       : { href: "/transactions", icon: FileSearch, title: "ตรวจรายการ", text: "เช็กว่าหมวดของแต่ละรายการถูกต้อง", urgent: false },
     { href: "/tax", icon: Calculator, title: "ภาษีโดยประมาณ", text: "ดูว่าปีนี้ต้องจ่ายภาษีเท่าไร", urgent: false },
     { href: "/plan", icon: PiggyBank, title: "แผนเก็บเงิน", text: "ลองว่าออมเดือนละเท่าไร แล้วเงินจะโตแค่ไหน", urgent: false },
-    { href: "/loan-ready", icon: Landmark, title: "พร้อมกู้", text: st && st.current >= 6 ? "ครบ 6 เดือนแล้ว ดูวงเงินที่ผ่อนไหว" : `ส่งครบแล้ว ${st?.current ?? 0}/6 เดือน`, urgent: false },
+    { href: "/loan-ready", icon: Landmark, title: "พร้อมกู้", text: st && st.coverage.continuousMonths >= 6 ? "ประวัติครบ 6 เดือนแล้ว ดูวงเงินที่ผ่อนไหว" : `ประวัติต่อเนื่อง ${st?.coverage.continuousMonths ?? 0}/6 เดือน`, urgent: false },
   ];
   return (
     <Section id="next" title="ทำต่อ" sub="ขั้นต่อไปที่ช่วยให้เงินของคุณชัดขึ้น">

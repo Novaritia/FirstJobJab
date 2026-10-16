@@ -20,7 +20,7 @@ export function toTable(tool: string, r: any): ChatData | undefined {
     case 'get_tax':
       return r.brackets.map((b: any) => ({ 'เงินได้สุทธิ (฿)': `${B(b.from).toLocaleString('en-US')}–${b.to === null ? '' : B(b.to).toLocaleString('en-US')}`, อัตรา: `${Math.round(b.rate * 100)}%`, 'ภาษี (฿)': B(b.tax) }));
     case 'get_streak':
-      return r.months.map((m: any) => ({ เดือน: m.month, 'มี statement': m.covered ? 'มี' : 'ขาด' }));
+      return r.recent.map((e: any) => ({ วันที่: new Date(e.at).toISOString().slice(0, 10), ประเภท: e.kind, 'รายการใหม่': e.rows, '🔥': '+1' }));
     case 'get_loan_ready':
       return [{ 'เดือนต่อเนื่อง': r.continuousMonths, 'ต้องการ (เดือน)': r.required, 'รายได้เฉลี่ย (฿)': B(r.avgIncome), 'รายจ่ายเฉลี่ย (฿)': B(r.avgSpend), 'ค่างวดสูงสุด (฿)': B(r.maxInstallment) }];
     case 'get_growth':
@@ -38,7 +38,7 @@ export const maskDigits = (s: string, min = 4) =>
 const maskUser = (s: string) => maskDigits(s, 7);
 
 /** Deep copy for the LLM: strings masked, satang → baht (except non-money counters). */
-const NOT_MONEY = new Set(['month', 'year', 'current', 'best', 'continuousMonths', 'required', 'rate', 'count', 'years', 'annualReturn', 'okCount', 'failCount']);
+const NOT_MONEY = new Set(['month', 'year', 'current', 'best', 'continuousMonths', 'required', 'rate', 'count', 'years', 'annualReturn', 'okCount', 'failCount', 'daysLeft', 'updatesThisMonth', 'rows', 'gained']);
 export function forLlm(v: unknown, key = ''): unknown {
   if (typeof v === 'string') return maskDigits(v);
   if (typeof v === 'number') return NOT_MONEY.has(key) ? v : Math.round(v) / 100;
@@ -79,7 +79,7 @@ const TOOLS: { name: string; description: string; parameters: Json }[] = [
   },
   { name: 'get_category_totals', description: 'ยอดใช้จ่ายรวมแยกตามหมวดในช่วงวันที่', parameters: { type: 'object', properties: { from: date, to: date }, required: ['from', 'to'] } },
   { name: 'get_tax', description: 'ประมาณการภาษีเงินได้ทั้งปี', parameters: { type: 'object', properties: { year: { type: 'integer' } } } },
-  { name: 'get_streak', description: 'จำนวนเดือนต่อเนื่องที่มี statement และเดือนที่ขาด', parameters: { type: 'object', properties: {} } },
+  { name: 'get_streak', description: 'ไฟ 🔥 streak: +1 ทุกครั้งที่อัปเดตข้อมูลใหม่ ต้องอัปเดตอย่างน้อยทุก 30 วันไม่งั้นไฟดับ (current, best, daysLeft) และ coverage = เดือนต่อเนื่องที่มี statement สำหรับความพร้อมกู้', parameters: { type: 'object', properties: {} } },
   { name: 'get_loan_ready', description: 'ความพร้อมกู้: เดือนต่อเนื่อง รายได้/รายจ่ายเฉลี่ย ค่างวดสูงสุดที่ผ่อนไหว', parameters: { type: 'object', properties: {} } },
   {
     name: 'get_growth', description: 'จำลองเงินออมโต (monthlySaving เป็นบาท, annualReturn เช่น 0.05)',
@@ -144,7 +144,7 @@ export class ChatService {
       tools.push(name);
       const result = await this.runTool(userId, name, args ?? {});
       data = toTable(name, result) ?? data;
-      return forLlm(result) as Json;
+      return forLlm(JSON.parse(JSON.stringify(result))) as Json; // Dates → ISO strings
     };
     try {
       let reply: string | null = null;
@@ -227,7 +227,9 @@ export class ChatService {
       }
       case 'streak': {
         const s = await this.stats.streak(userId);
-        return fb('get_streak', s, `ส่ง statement ต่อเนื่อง ${s.current} เดือน (ดีที่สุด ${s.best})${s.missing.length ? ` ยังขาด ${s.missing.join(', ')}` : ''}`);
+        return fb('get_streak', s, s.current
+          ? `🔥 ${s.current} (สูงสุด ${s.best}) อัปเดตครั้งถัดไปภายใน ${s.daysLeft} วัน ไม่งั้นไฟดับ`
+          : `ไฟดับอยู่ (สูงสุด ${s.best}) อัปโหลด statement หรือสลิปใหม่เพื่อจุดไฟอีกครั้ง`);
       }
       case 'loan': {
         const l = await this.stats.loanReady(userId);

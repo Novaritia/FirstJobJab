@@ -6,3 +6,4 @@ uploads
 *.log
 real-samples/
 *.err
+backups/

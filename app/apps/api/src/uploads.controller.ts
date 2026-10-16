@@ -247,6 +247,6 @@ export class UploadsController {
     for (const p of imported.pairs) await this.audit.log(req, 'slip_merged', { target: p.slipTxId, after: { statementTransactionId: p.stmtTxId } });
     await this.stats.markOwnTransfers(userId);
     await this.audit.log(req, 'confirm_import', { target: id, after: { imported: imported.count } });
-    return { imported: imported.count, streak: await this.stats.streak(userId) };
+    return { imported: imported.count, streak: { ...(await this.stats.streak(userId)), gained: imported.count > 0 ? 1 : 0 } };
   }
 }

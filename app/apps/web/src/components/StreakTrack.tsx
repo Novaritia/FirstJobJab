@@ -5,7 +5,7 @@ import { useApi, cx } from "./ui";
 import { Flame, Loop } from "./motion";
 import type { Streak } from "@/lib/api";
 
-/** 6 month cells: a flame when a statement is in, the month due pulses "อัปโหลด", older gaps say ขาด. */
+/** History coverage (loan-ready), 6 month cells: a flame when a statement is in, the month due pulses "อัปโหลด", older gaps say ขาด. */
 export function StreakTrack({ months, due }: { months: { label: string; covered: boolean }[]; due?: number }) {
   return (
     <Loop className="w-full">
@@ -25,13 +25,28 @@ export function StreakTrack({ months, due }: { months: { label: string; covered:
   );
 }
 
-/** Compact flame + N counter for the app shell; links to /upload. */
+/** Deadline colour: amber at ≤7 days, red at ≤2 (or out). */
+export const fireTone = (s: Pick<Streak, "current" | "daysLeft">) =>
+  s.current === 0 || s.daysLeft <= 2 ? "text-danger" : s.daysLeft <= 7 ? "text-warning" : "text-muted";
+
+/** "อัปเดตครั้งถัดไปภายใน X วัน ไม่งั้นไฟดับ" (or how to relight). */
+export function FireDeadline({ s, className }: { s: Pick<Streak, "current" | "daysLeft">; className?: string }) {
+  return (
+    <p className={cx("text-sm font-medium", fireTone(s), className)}>
+      {s.current > 0 ? <>อัปเดตครั้งถัดไปภายใน <span className="num">{s.daysLeft}</span> วัน ไม่งั้นไฟดับ</> : "ไฟดับแล้ว อัปโหลด statement หรือสลิปใหม่เพื่อจุดไฟอีกครั้ง"}
+    </p>
+  );
+}
+
+/** Compact 🔥 counter for the app shell (no maximum); links to /upload. */
 export function StreakBadge({ className }: { className?: string }) {
   const { data } = useApi<Streak>("/streak");
+  const warn = data && data.current > 0 && data.daysLeft <= 7;
   return (
-    <Link href="/upload" title="streak: อัปโหลด statement ทุกเดือน" aria-label={`streak ${data?.current ?? 0} เดือน อัปโหลด statement`}
-      className={cx("inline-flex min-h-9 items-center gap-1 rounded border border-primary/25 bg-primary-soft px-2.5 text-sm font-semibold text-primary transition-colors duration-150 hover:border-primary/50", className)}>
-      <Flame /> <span className="num inline-block min-w-[1ch]">{data ? data.current : "–"}</span><span className="text-xs font-medium">/6</span>
+    <Link href="/upload" title={data?.current ? `อัปเดตภายใน ${data.daysLeft} วัน ไม่งั้นไฟดับ` : "อัปเดตข้อมูลเพื่อจุดไฟ"} aria-label={`streak ${data?.current ?? 0} อัปเดตข้อมูล`}
+      className={cx("inline-flex min-h-9 items-center gap-1 rounded border px-2.5 text-sm font-semibold transition-colors duration-150",
+        warn ? (data.daysLeft <= 2 ? "border-danger/40 bg-danger-bg text-danger" : "border-warning/40 bg-warning-bg text-warning") : "border-primary/25 bg-primary-soft text-primary hover:border-primary/50", className)}>
+      <Flame /> <span className="num inline-block min-w-[1ch]">{data ? data.current : "–"}</span>
     </Link>
   );
 }

@@ -3,6 +3,7 @@ import { useRef, useState } from "react";
 import { BookOpen, Camera, CircleCheck, FileUp, Hand, ImagePlus, KeyRound, Loader2, TriangleAlert, X } from "lucide-react";
 import { motion } from "motion/react";
 import { EASE, Flame, Rolling } from "@/components/motion";
+import { FireDeadline } from "@/components/StreakTrack";
 import { BANK_NAMES, type Direction } from "@fjm/shared";
 import { ApiError, api, errorText, json, type ReviewRow, type Slip, type Streak, type UploadResult } from "@/lib/api";
 import { baht, dateLabel, toSatang } from "@/lib/format";
@@ -26,7 +27,7 @@ export default function UploadPage() {
   const [items, setItems] = useState<Item[]>([]);
   const [drag, setDrag] = useState(false);
   const [announce, setAnnounce] = useState("");
-  const [celebrate, setCelebrate] = useState<number | null>(null);
+  const [celebrate, setCelebrate] = useState<Streak | null>(null);
   const [slips, setSlips] = useState<(Slip & { confirmed?: boolean })[]>([]);
   const [slipState, setSlipState] = useState<{ busy?: boolean; error?: string }>({});
   const seq = useRef(0);
@@ -70,8 +71,9 @@ export default function UploadPage() {
 
   async function confirmSlip(id: string) {
     try {
-      await api(`/slips/${id}/confirm`, json("POST"));
+      const res = await api<{ streak?: Streak }>(`/slips/${id}/confirm`, json("POST"));
       setSlips((xs) => xs.map((x) => (x.id === id ? { ...x, confirmed: true } : x)));
+      if (res.streak?.gained) setCelebrate(res.streak);
       setAnnounce("เพิ่มรายการจากสลิปแล้ว");
     } catch (e) {
       setSlipState({ error: errorText(e) });
@@ -202,7 +204,7 @@ export default function UploadPage() {
             <UploadItem item={it} onRetry={(pw) => send(it, pw)}
               onConfirmed={(imported, streak) => {
                 patch(it.key, { status: "done", imported });
-                setCelebrate(streak);
+                if (streak?.gained) setCelebrate(streak); // re-import of known rows: no +1
                 setAnnounce(`ยืนยันแล้ว นำเข้า ${imported} รายการ`);
               }}
               onUpdate={(result) => patch(it.key, { result })} />
@@ -218,7 +220,7 @@ export default function UploadPage() {
 function UploadItem({ item, onRetry, onConfirmed, onUpdate }: {
   item: Item;
   onRetry: (password?: string) => void;
-  onConfirmed: (imported: number, streak: number) => void;
+  onConfirmed: (imported: number, streak: Streak | undefined) => void;
   onUpdate: (r: UploadResult) => void;
 }) {
   const [busy, setBusy] = useState(false);
@@ -265,8 +267,8 @@ function UploadItem({ item, onRetry, onConfirmed, onUpdate }: {
     setBusy(true);
     setError("");
     try {
-      const res = await api<{ imported: number; streak: Streak | number }>(`/uploads/${r!.uploadId}/confirm`, json("POST", acceptUnverified ? { acceptUnverified } : undefined));
-      onConfirmed(res.imported, typeof res.streak === "number" ? res.streak : res.streak.current);
+      const res = await api<{ imported: number; streak?: Streak }>(`/uploads/${r!.uploadId}/confirm`, json("POST", acceptUnverified ? { acceptUnverified } : undefined));
+      onConfirmed(res.imported, res.streak);
     } catch (e) {
       setError(e instanceof ApiError && e.status === 409 ? "ยังมีแถวที่ยอดไม่ตรง แก้ให้ครบก่อนยืนยัน" : errorText(e));
     } finally {
@@ -428,7 +430,8 @@ function FailRow({ row, expected, uploadId, onResult }: {
   );
 }
 
-function Celebration({ streak, onClose }: { streak: number; onClose: () => void }) {
+function Celebration({ streak, onClose }: { streak: Streak; onClose: () => void }) {
+  const gained = streak.gained ?? 1;
   return (
     <motion.div role="dialog" aria-modal="true" aria-labelledby="cel-t" className="fixed inset-0 z-50 flex items-center justify-center bg-[rgb(10_15_25/0.45)] p-4"
       initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.2 }}>
@@ -438,21 +441,15 @@ function Celebration({ streak, onClose }: { streak: number; onClose: () => void 
         <motion.span aria-hidden className="pointer-events-none absolute inset-y-0 -left-1/2 w-1/2 -skew-x-12"
           style={{ background: "linear-gradient(90deg, transparent, rgb(212 175 55 / 0.28), rgb(122 162 247 / 0.28), transparent)" }}
           initial={{ x: "0%" }} animate={{ x: "420%" }} transition={{ duration: 1.1, delay: 0.25, ease: [0.4, 0, 0.2, 1] }} />
-        <p className="text-sm font-medium text-muted">Streak เพิ่มขึ้น</p>
-        <h2 id="cel-t" className="mt-1 text-4xl font-semibold text-primary">
-          <Flame /> <Rolling value={streak} from={streak - 1} format={(v) => `${v}`} />/6 <span className="text-lg font-medium text-text">เดือน</span>
+        <motion.p className="inline-flex items-center gap-1 rounded-full bg-primary-soft px-3 py-1 text-sm font-semibold text-streak"
+          initial={{ opacity: 0, y: 10, scale: 0.8 }} animate={{ opacity: 1, y: 0, scale: 1 }} transition={{ duration: 0.45, delay: 0.15, ease: EASE }}>
+          +{gained} <Flame />
+        </motion.p>
+        <h2 id="cel-t" className="mt-3 text-5xl font-semibold text-primary">
+          <Flame /> <Rolling value={streak.current} from={Math.max(0, streak.current - gained)} format={(v) => `${v}`} />
         </h2>
-        <ol className="mt-4 grid grid-cols-6 gap-1" aria-hidden>
-          {Array.from({ length: 6 }, (_, i) => (
-            <li key={i} className="h-1.5 overflow-hidden rounded-sm bg-subtle">
-              {i < streak && (
-                <motion.span className="block h-full origin-left bg-primary" initial={{ scaleX: i === streak - 1 ? 0 : 1 }} animate={{ scaleX: 1 }}
-                  transition={{ duration: 0.6, delay: 0.5, ease: EASE }} />
-              )}
-            </li>
-          ))}
-        </ol>
-        <p className="mt-3 text-muted">{streak >= 6 ? <span className="inline-flex items-center gap-1">ครบแล้ว พร้อมยื่นกู้ <CircleCheck aria-hidden size={16} className="text-success" /></span> : `อีก ${6 - streak} เดือนพร้อมยื่นกู้`}</p>
+        <p className="mt-2 text-sm text-muted">ไฟติดต่อ · สถิติสูงสุด <span className="num">{streak.best}</span></p>
+        <FireDeadline s={streak} className="mt-1" />
         <div className="mt-6 flex flex-wrap justify-center gap-3">
           <ButtonLink href="/dashboard">ไปหน้าหลัก</ButtonLink>
           <Button variant="soft" onClick={onClose} autoFocus>อัปโหลดต่อ</Button>

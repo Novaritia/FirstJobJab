@@ -13,9 +13,13 @@ export type UploadResult = {
   uploadId: string; bank: Bank; period: { start: string; end: string }; accountNoMasked: string;
   rows: ReviewRow[]; check: BalanceCheckResult;
 };
+/** History coverage for loan-ready (x/6 continuous months) — not the 🔥 streak. */
+export type Coverage = { months: { month: string; covered: boolean }[]; continuousMonths: number; missing: string[]; expiringSoon: string[] };
+/** 🔥 streak: +1 per update that added data, no maximum; goes out after 30 days without an update. */
 export type Streak = {
-  current: number; best: number; months: { month: string; covered: boolean }[];
-  missing: string[]; expiringSoon: string[];
+  current: number; best: number; lastUpdateAt: string | null; expiresAt: string | null; daysLeft: number;
+  updatesThisMonth: number; recent: { at: string; kind: string; rows: number }[]; coverage: Coverage;
+  gained?: number; // only on confirm responses
 };
 export type Tx = {
   id: string; accountId: string; date: string; time?: string; description: string; amount: number;

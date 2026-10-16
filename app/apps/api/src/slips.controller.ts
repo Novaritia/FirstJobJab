@@ -136,6 +136,7 @@ export class SlipsController {
         id: t.id, accountId: t.accountId, date: t.date, time: t.time ?? undefined, description: t.description, amount: t.amount,
         direction: t.direction, category: t.category, source: t.source, verified: t.verified, hidden: t.hidden, edited: false,
       },
+      streak: { ...(await this.stats.streak(userId)), gained: 1 },
     };
   }
 }

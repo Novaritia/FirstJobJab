@@ -83,7 +83,7 @@ export default function Onboarding() {
           <FileUp aria-hidden size={48} className="mx-auto text-primary" />
           <h2 className="mt-3 text-xl font-bold">อัปโหลด statement ย้อนหลัง 3–6 เดือน</h2>
           <p className="mx-auto mt-2 max-w-md text-muted">
-            ขอ e-statement จากแอปธนาคาร (KBank / Bangkok Bank) แล้วอัปโหลดทีเดียวหลายไฟล์ได้ ยิ่งครบหลายเดือน streak ยิ่งเริ่มสูง <Flame />
+            ขอ e-statement จากแอปธนาคาร (KBank / Bangkok Bank) แล้วอัปโหลดทีเดียวหลายไฟล์ได้ ทุกไฟล์ที่มีรายการใหม่ได้ไฟ +1 <Flame /> อัปเดตอย่างน้อยทุก 30 วันไฟจะไม่ดับ
           </p>
           <div className="mt-6 flex flex-wrap justify-center gap-3">
             <ButtonLink href="/upload">อัปโหลดเลย</ButtonLink>

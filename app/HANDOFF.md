@@ -33,6 +33,7 @@ Spec: `../01-brainstorm/idea-first-jobber-money.md` · Tech plan: `../03-tech/te
 | Slips + scanned PDF (verified vs fjm_demo, 08:40) | ✅ `POST /slips` (repeated `images`) + `/slips/:id/confirm` in API.md; Paddle sidecar run: 4/4 mock slips all fields right (2 matched, 2 unmatched→confirm ok), `SCANNED_KBANK_2026-09.pdf` 50/50 rows, 0 ⚠️, ~12 s. Tesseract fallback also 4/4 slips + 50/50 rows (~9 s). `docker compose --profile full build` exit 0 (api 3.24 GB, ocr 770 MB) |
 | Universal import (any Thai bank + e-wallets, 11:30) | ✅ `Bank` = 15 banks + TRUEMONEY/SHOPEEPAY/LINEPAY/PAOTANG + OTHER; `detectBank` never null; KBANK/BBL layout parser then layout-free `parseGenericStatement` (better-verifying one wins); no-balance wallet rows → `check.mode` totals/none, confirm needs `acceptUnverified` (rows verified=false); web review shows ✋ + bulk confirm. Mocks SCB/KTB/TRUEMONEY_2026-09.pdf + wallet/truemoney_history PNG all parse (live :4000 run ok, test uploads deleted). Real KBank sample not yet received (app/real-samples/ empty) |
 | Assistant chat + voice (ElevenLabs STT/TTS) | 🔄 api agent: POST /chat, /chat/voice; web agent: /assistant page after redesign |
+| 🔥 streak v2 (11:50): +1 per update with new data, no max, out after 30 days w/o update (from audit_log); x/6 months kept as loan-ready `coverage`. API + web (dashboard hero, badge, +1 celebration, landing/onboarding copy, chat) | ✅ api 44 unit + 2 e2e, web tsc/lint/build; curl ok. demo-preload now gives 🔥10 |
 | Pitch deck / demo script | ❌ not started (`../05-pitch/` has old outlines for a dropped idea) |
 | Git commit / push | ✅ f14f320 pushed to main (app/ + 2 new docs). Older uncommitted docs from earlier sessions left untouched |
 
@@ -54,7 +55,7 @@ Spec: `../01-brainstorm/idea-first-jobber-money.md` · Tech plan: `../03-tech/te
 docker compose up -d db
 pnpm --filter @fjm/shared build      # api imports shared/dist
 cd apps/api && npx prisma migrate deploy && pnpm build && pnpm seed && pnpm start:prod   # :4000
-sh demo-preload.sh                   # loads Apr–Aug for demo user → streak 5/6
+sh demo-preload.sh                   # loads Apr–Aug for demo user → 🔥10, coverage 5/6
 pnpm --filter web dev                # :3000
 # OCR sidecar (optional; else tesseract): cd apps/ocr && pip install rapidocr==3.10.0 onnxruntime fastapi uvicorn python-multipart opencv-python-headless && uvicorn server:app --port 8765
 ```
@@ -81,3 +82,4 @@ Local DB in use: **`fjm_demo`** (`.env` DATABASE_URL). Old `fjm` DB has test jun
 - (11:15) Verified vs real API: chat OK with Gemini (Windows curl mangles Thai args — send UTF-8 from a file); demo PDF auto-unlock fixed by re-running `pnpm seed` (a test had changed demo birthDate). Slip→statement double count fixed (pairSlipRows).
 - (11:30) IN PROGRESS (OCR agent): universal parser for every Thai bank + e-wallets (TrueMoney, ShopeePay, LINE Pay, Paotang). Real KBank upload failed on old mock-based parser. Wallet rows without balance: verify by totals if printed, else ✋ unverified + explicit bulk confirm. Real files go in app/real-samples/ (gitignored, never committed).
 - (11:45) Perf: API listens on "::" (dual-stack) — IPv4-only cost ~200ms/request via localhost on Windows. For demo run web in production: `pnpm --filter web build && pnpm --filter web start` (dev mode compiles pages on first visit, 0.7–2s).
+- (11:50) DB volume app_dbdata was deleted+recreated at 11:39 by an unknown command (down -v?) — all fjm_demo data lost; agent re-seeded demo. Volume now `external: true` (down -v cannot delete it). Backup: `sh backup-db.sh` → app/backups/ (gitignored). Orphan encrypted uploads from before 11:39 remain in apps/api/uploads.

@@ -37,7 +37,7 @@ If PDF is locked and no password given, server tries stored PII (birth date / na
 | Method | Path | Body | Returns |
 |---|---|---|---|
 | POST | /slips | multipart repeated `images` (PNG/JPEG, ≤10 × 10 MB) | `{slips: Slip[]}` — 400 images_required, 415 not_an_image |
-| POST | /slips/:id/confirm | optional fixes `{amount?, date?, time?, description?, category?}` | `{transaction}` (source='slip', verified=false). 409 slip_not_unmatched, 422 slip_incomplete (no amount/date) |
+| POST | /slips/:id/confirm | optional fixes `{amount?, date?, time?, description?, category?}` | `{transaction, streak}` (source='slip', verified=false; streak as GET /streak + `gained`). 409 slip_not_unmatched, 422 slip_incomplete (no amount/date) |
 
 `Slip = {id, amount?, date?, time?, fromName?, toName?, bank?, ref?, qrRef?, matchedTransactionId?, status: 'matched'|'unmatched'|'confirmed', confidence: 0..1}`
 - Read = slip-verify QR (exact ref) + OCR (Paddle sidecar or tesseract) + regex. Web warns when `confidence < 0.9`.
@@ -63,7 +63,9 @@ GET /transactions filters (all optional): `q` (≤100 chars, case-insensitive co
 | GET | /insights/loan-ready | — | `{continuousMonths, required: 6, avgIncome, avgSpend, maxInstallment}` |
 
 ## Streak
-| GET | /streak | — | `{current, best, months: {month:'YYYY-MM', covered: boolean}[], missing: string[], expiringSoon: string[]}` |
+| GET | /streak | — | `{current, best, lastUpdateAt, expiresAt, daysLeft, updatesThisMonth, recent: {at, kind:'statement'\|'passbook'\|'wallet'\|'slip', rows}[] (last 10), coverage: {months: {month:'YYYY-MM', covered}[], continuousMonths, missing: string[], expiringSoon: string[]}}` |
+
+🔥 rule: +1 for every update that adds data (confirmed import with ≥1 new row, confirmed slip, slip matched to a row) — several per day count, no maximum. More than 30 days without an update → `current` 0 (`best` kept, `expiresAt` null, `daysLeft` 0). Derived from audit_log. `coverage` = statement history for loan-ready (x/6 continuous months), not the fire. Confirm responses (`/uploads/:id/confirm`, `/slips/:id/confirm`) carry `streak` = this object + `gained` (0 or 1).
 
 ## Voice
 | GET | /voice/weekly | — | `audio/mpeg` (ElevenLabs TTS of the weekly summary text); 503 if no key |
