@@ -24,5 +24,7 @@ export async function createApp() {
 
 if (process.env.NODE_ENV !== 'test') {
   const app = await createApp();
-  await app.listen(Number(process.env.API_PORT ?? 4000), '0.0.0.0');
+  const port = Number(process.env.API_PORT ?? 4000);
+  // '::' is dual-stack, so "localhost" → ::1 connects at once (IPv4-only cost ~200ms per request on Windows); fall back where IPv6 is off.
+  await app.listen(port, '::').catch(() => app.listen(port, '0.0.0.0'));
 }
