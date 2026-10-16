@@ -12,13 +12,15 @@ import { PrismaService } from './prisma.service.js';
 import { AuditService } from './audit.service.js';
 import { AuthGuard, UserId, type Req } from './auth.js';
 import { decryptStr, encrypt, envKey, sha256 } from './crypto.js';
-import { extractPdfItems, PdfPasswordError, type PdfItem } from './pdf.js';
+import { extractPdfItems, PdfPasswordError, renderPdfPages, type PdfItem } from './pdf.js';
+import { ocrPages } from './ocr.js';
 import { categorize } from './categorize.js';
 import { StatsService } from './stats.service.js';
 import { parse } from './validation.js';
 
 export const UPLOAD_DIR = join(process.cwd(), 'uploads');
 export const MAX_PDF_BYTES = 10 * 1024 * 1024;
+const MAX_OCR_PAGES = 15; // ~2.5 s/page on CPU
 const BANKS: Bank[] = ['KBANK', 'BBL'];
 
 interface Parsed { statement: ParsedStatement; categories: Category[] }
@@ -64,9 +66,15 @@ export class UploadsController {
       throw new HttpException('already_imported', 409);
     }
 
-    const pages = await this.openPdf(userId, file, password);
+    const opened = await this.openPdf(userId, file, password);
     password = undefined;
-    const lines = pdfItemsToLines(pages);
+    let lines = pdfItemsToLines(opened.pages);
+    const ocr = lines.length < 5; // scanned statement: no usable text layer → OCR the rendered pages
+    if (ocr) {
+      if (opened.pages.length > MAX_OCR_PAGES) throw new HttpException('too_many_pages', 422);
+      lines = await ocrPages(await renderPdfPages(file, opened.password));
+    }
+    opened.password = undefined;
     const bank = detectBank(lines);
     if (!bank) throw new HttpException('unsupported_bank', 422);
     let statement: ParsedStatement;
@@ -89,18 +97,18 @@ export class UploadsController {
     const filePath = join(UPLOAD_DIR, `${upload.id}.pdf.enc`);
     await writeFile(filePath, encrypt(file, envKey('FILE_KEY')));
     await this.prisma.upload.update({ where: { id: upload.id }, data: { filePath } });
-    await this.audit.log(req, 'upload', { target: upload.id, after: { bank: statement.bank, sha256: hash, rows: statement.rows.length, failCount: check.failCount } });
+    await this.audit.log(req, 'upload', { target: upload.id, after: { bank: statement.bank, sha256: hash, rows: statement.rows.length, failCount: check.failCount, ocr } });
 
     return {
       uploadId: upload.id, bank: statement.bank, period: { start: statement.periodStart, end: statement.periodEnd },
-      accountNoMasked: statement.accountNoMasked, rows: reviewRows(parsed, check), check,
+      accountNoMasked: statement.accountNoMasked, rows: reviewRows(parsed, check), check, ocr,
     };
   }
 
-  /** Try the given password; else candidates from the user's stored PII. Passwords never leave this function. */
-  private async openPdf(userId: string, file: Buffer, password?: string): Promise<PdfItem[][]> {
+  /** Try the given password; else candidates from the user's stored PII. The working password is returned only so a scanned PDF can be rendered in the same request; never stored. */
+  private async openPdf(userId: string, file: Buffer, password?: string): Promise<{ pages: PdfItem[][]; password?: string }> {
     try {
-      return await extractPdfItems(file, password);
+      return { pages: await extractPdfItems(file, password), password };
     } catch (e) {
       if (!(e instanceof PdfPasswordError)) throw new HttpException('unreadable_pdf', 422);
       if (password) throw new HttpException('password_required', 422);
@@ -111,7 +119,7 @@ export class UploadsController {
       const p = { birthDate: decryptStr(pii.birthDateEnc, key), nationalId: decryptStr(pii.nationalIdEnc, key) };
       for (const cand of [...new Set(BANKS.flatMap((b) => pdfPasswordCandidates(b, p)))]) {
         try {
-          return await extractPdfItems(file, cand);
+          return { pages: await extractPdfItems(file, cand), password: cand };
         } catch (e) {
           if (!(e instanceof PdfPasswordError)) throw new HttpException('unreadable_pdf', 422);
         }

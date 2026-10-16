@@ -1,21 +1,25 @@
 # Univerxal
 
-> 🔒 **LOCKED 2026-10-15** — our U-Hackathon project. Supersedes [ChatCFO](idea-chatcfo.md) (now its core engine), LoanReady (now one feature) and the Kompass group-money idea.
+> 💡 **Candidate (not chosen)** — combines [ChatCFO](idea-chatcfo.md) and LoanReady.
 >
-> **"Your AI money assistant — every sale, slip and payment from every chat and platform, recorded automatically. Then books, tax, group money, forecasts and credit, done for you."**
+> **"Your AI money assistant — every sale, slip and payment from every chat and platform, recorded automatically. Then books, tax, forecasts and credit, done for you."**
+>
+> **Who it's for:** people and merchants **without a registered company** (natural persons) — small shops, online sellers, freelancers — who file personal tax. No family / friends group money.
+>
+> **Design rule: easy enough for grandma.** Connect once, then nothing to type: no forms, no accounting words, one-tap confirm only when unsure, voice for cash.
 
 ## TL;DR (ไทย)
 
-Univerxal คือผู้ช่วยการเงิน AI สำหรับคนที่ไม่มีเงินเดือนประจำ (แม่ค้าออนไลน์ ฟรีแลนซ์ เอสเอ็มอี) และกลุ่มเพื่อน/ครอบครัว
+Univerxal คือผู้ช่วยการเงิน AI สำหรับคนที่**ไม่ได้จดบริษัท** (แม่ค้าออนไลน์ ร้านเล็ก ฟรีแลนซ์) — ทั้งร้านค้าและบุคคลที่ต้องยื่นภาษีบุคคลธรรมดาเอง **ใช้ง่ายแบบยายก็ใช้ได้**: เชื่อมครั้งเดียว ไม่ต้องกรอกอะไร
 - **ดึงประวัติอัตโนมัติ** — ร้านกดเชื่อม LINE OA / เพจ Facebook / Instagram ครั้งเดียว ทุกสลิปและออเดอร์ที่ลูกค้าส่งในแชทถูกดึงมาลงประวัติเอง (webhook เงียบ ๆ ไม่ตอบลูกค้า) + รวมประวัติจากแพลตฟอร์มอื่นที่มี webhook
 - **รวมประวัติ ไม่รวมเงิน** — ไม่แตะเงิน ไม่เข้าบัญชีธนาคาร
-- **ต่อยอด** — บัญชี, วิเคราะห์, พยากรณ์, ภาษีบุคคลธรรมดา, เงินกลุ่ม, ตรวจสลิป, สินเชื่อ (หนึ่งในฟีเจอร์) + ElevenLabs เสียง + u-topia ยืนยันตัวตน/ความยินยอม
+- **ต่อยอด** — บัญชี, วิเคราะห์, พยากรณ์, ภาษีบุคคลธรรมดา, ตรวจสลิป, สินเชื่อ (หนึ่งในฟีเจอร์) + ElevenLabs เสียง + u-topia ยืนยันตัวตน/ความยินยอม
 
 ---
 
 ## 1. Problem
 
-- Thai sellers, freelancers and SMEs sell through **LINE, Facebook, Instagram, marketplaces and payment links**. Orders and slips are scattered across chats — **nobody keeps the history**.
+- Thai sellers, small shops and freelancers **without a registered company** sell through **LINE, Facebook, Instagram, marketplaces and payment links**. Orders and slips are scattered across chats — **nobody keeps the history**.
 - Existing tools make the merchant do the work: **forward slips one by one** (ป้านวล, Zendai), or **move all selling into a new system** (Zwiz, Page365), or **type books manually** (FlowAccount, PEAK).
 - Without history: no idea of real profit, **tax risk** under the e-Payment law (banks report **3,000+ deposits/year, or 400+ totalling ≥ ฿2M**, since 2019), money from friends/family mixed with sales, fake slips, cash shortfalls nobody saw coming.
 - Credit is one consequence: **60–70% of SME loans rejected; 78% for new SMEs** with no financial track record (Bank of Thailand, Sep 2026).
@@ -38,26 +42,27 @@ Univerxal (never replies to customers, never touches money)
         ▼
 Private notice to the merchant: "✅ Sale ฿780 (FB · Khun Nok) recorded"
         ▼
-Books · Analysis · Forecast · Tax · Group money · Slip guard · Credit
+Books · Analysis · Forecast · Tax · Slip guard · Credit
 ```
 
-### Three spaces
+### Two spaces
 | Space | Who |
 |---|---|
-| 👤 Personal | Natural persons: freelancers, online sellers, side-income earners |
-| 🏪 Business | Merchants and SMEs |
-| 👨‍👩‍👧 Group | Family, friends, trips, parties |
+| 👤 Personal | Natural persons: freelancers, online sellers, side-income earners — personal tax |
+| 🏪 Business | Merchants without a registered company — customer payments from chat |
 
 ## 3. Capture — history from every chat and platform
 
 **Principle:** we aggregate **history (records)**, not money. Webhook if the platform offers one → API with the user's permission → share / voice / upload as fallback.
 
-### 3.1 Automatic from chats ⭐ (the merchant does nothing after connecting)
+### 3.1 Automatic from chats ⭐ P0 — build first (the merchant does nothing after connecting)
+Full flows: [`03-tech/capture-flows.md`](../03-tech/capture-flows.md)
+
 | Platform | How | Status |
 |---|---|---|
 | **LINE OA** | Messaging API webhook; shop admins keep chatting manually (chat + webhook can run together); bot stays silent | ✅ Demo |
 | **Facebook Page (Messenger)** | Meta Messenger webhook | ✅ Demo (dev mode: team accounts only) |
-| **Instagram DM** | Instagram Messaging webhook (Professional account) | 🟡 Stretch — harder setup |
+| **Instagram DM** | Instagram Messaging webhook (Professional account, Instagram Login) | ✅ Demo (dev mode: team accounts only) |
 
 ### 3.1b Personal accounts (no automatic capture)
 Webhooks exist **only for business accounts**. Personal Facebook Messenger, personal Instagram and personal LINE have **no official API** — logging in on the user's behalf or scraping would break platform terms, risk account bans and violate PDPA. We never do it.
@@ -93,7 +98,7 @@ Onboarding message: *"Switch to a free business account in 2 minutes and Univerx
 
 ### 3.4 Smart confirmation
 AI categorises everything; asks **only when unsure**, with one-tap buttons:
-> "เงินเข้า ฿500 จาก 'นก' คืออะไรคะ?" **[🛒 ขายของ] [👨‍👩‍👧 ส่วนตัว] [🎉 เงินทริป] [💸 ยืม]** — and remembers next time.
+> "เงินเข้า ฿500 จาก 'นก' คืออะไรคะ?" **[🛒 ขายของ] [👨‍👩‍👧 ส่วนตัว] [💸 ยืม]** — and remembers next time.
 
 ## 4. Connecting — how easy is it
 
@@ -118,7 +123,7 @@ AI categorises everything; asks **only when unsure**, with one-tap buttons:
 |---|---|
 | Unified history timeline: who ordered what, paid how much, when, which channel, with evidence | ✅ |
 | Auto bookkeeping + categories | ✅ |
-| **Deposit classifier** — sale / personal / loan / refund / group reimbursement ⭐ | ✅ |
+| **Deposit classifier** — sale / personal (family, own account) / loan / refund ⭐ | ✅ |
 | Slip guard — duplicate slip, wrong amount, no matching order | ✅ |
 | Receivables — who owes, polite reminder drafts | 🟡 |
 | Business vs personal split | 🟡 |
@@ -142,21 +147,13 @@ AI categorises everything; asks **only when unsure**, with one-tap buttons:
 ### ④ Tax (natural person)
 | Feature | Status |
 |---|---|
-| Tax on **real income** (reimbursements and personal transfers excluded) | ✅ |
+| Tax on **real income** (personal transfers, loans and refunds excluded) | ✅ |
 | Flat vs actual expense comparison | ✅ |
 | e-Payment / VAT threshold alerts | ✅ |
 | Deduction tips | 🟡 |
 | Figures for ภ.ง.ด.90/94, audit evidence pack, e-Tax receipts | ⏭️ |
 
-### ⑤ Group money (family / friends / party)
-| Feature | Status |
-|---|---|
-| Group pots (trip, party, household, parents' care) | ✅ (1 pot) |
-| **Friends' repayments ≠ income** ⭐ | ✅ |
-| Receipt split by item; who-owes-who; PromptPay QR settle (person to person — we never hold money) | 🟡 |
-| Bot inside LINE groups | ⏭️ |
-
-### ⑥ Credit — LoanReady (one feature, not the core)
+### ⑤ Credit — LoanReady (one feature, not the core)
 | Feature | Status |
 |---|---|
 | Verified income from history + statement | ✅ |
@@ -165,7 +162,7 @@ AI categorises everything; asks **only when unsure**, with one-tap buttons:
 | Program matching (บสย., SME D Bank, GSB, BOT Credit Portal Dec 2026) | 🟡 |
 | Interview practice (ElevenLabs Agent) | 🟡 |
 
-### ⑦ ElevenLabs (voice)
+### ⑥ ElevenLabs (voice)
 | Feature | Status |
 |---|---|
 | Voice notes → entries (speech-to-text) | ✅ |
@@ -173,7 +170,7 @@ AI categorises everything; asks **only when unsure**, with one-tap buttons:
 | Monday voice CFO summary (text-to-speech) | 🟡 |
 | AI accountant hotline — call and tell your day, it records (Agents + telephony) | ⏭️ |
 
-### ⑧ u-topia trust layer (credit · identity · compliance)
+### ⑦ u-topia trust layer (credit · identity · compliance)
 | Feature | Status |
 |---|---|
 | Consent screen — what to share, with whom, how long (PDPA) | ✅ |
@@ -188,32 +185,30 @@ AI categorises everything; asks **only when unsure**, with one-tap buttons:
 
 ## 6. Key selling points
 1. **"Connect once. Every slip your customers send — on LINE, Facebook or Instagram — is recorded automatically. You never forward anything."**
-2. **"Your bank shows ฿1.9M; Univerxal knows only ฿1.1M is real income"** — the rest is family transfers and trip money → right tax, real planning, credible credit.
+2. **"Your bank shows ฿1.9M; Univerxal knows only ฿1.1M is real income"** — the rest is family transfers, own-account moves and refunds → right tax, real planning, credible credit.
 3. **Works with what shops already use** — we don't replace Zwiz, Page365 or FlowAccount; we're the layer on top.
 
 ## 7. Competitors
 
 | Competitor | What they do | Gap Univerxal fills |
 |---|---|---|
-| **ป้านวล / Zendai** | Bookkeeping in LINE — **merchant forwards slips** | Auto-capture from customer chats; multi-platform; tax, group, forecast, credit |
-| **Zwiz.AI** | Chat commerce on FB/IG/LINE/TikTok/WhatsApp, payments, fake-slip check (70,000+ businesses reported) | Shops must sell through Zwiz; no personal tax, group money or credit |
+| **ป้านวล / Zendai** | Bookkeeping in LINE — **merchant forwards slips** | Auto-capture from customer chats; multi-platform; tax, forecast, credit |
+| **Zwiz.AI** | Chat commerce on FB/IG/LINE/TikTok/WhatsApp, payments, fake-slip check (70,000+ businesses reported) | Shops must sell through Zwiz; no personal tax or credit |
 | **Page365** | Unified FB/LINE/IG inbox, orders, receipts, tax invoices | Order management, not money intelligence |
 | **FlowAccount / PEAK** | Accounting for registered companies, manual entry | Informal sellers; zero entry; we can export to them |
-| **KhunThong / MAKE by KBank** | Bill split, savings pockets | Can't separate repayments from income for tax/credit |
 | Lender-side AI (MoF "AI นกกระซิบ", SME D Bank) | Score applicants | We prepare applicants |
 
 ## 8. Legal (third-party only)
 - Merchant **connects their own business accounts**; we only receive copies of messages sent to the business.
 - **No personal chats, no bank apps, no bank logins.**
 - **Never holds money, never moves money, never lends or approves.**
-- Group money = record book; settlement is person-to-person via PromptPay QR.
 - Tax = **estimate**; readiness score = advice to the owner, not a credit score.
 - PDPA consent; data shared with lenders only by the owner's choice, via u-topia's compliance layer.
 
 ## 9. Business model (hypotheses)
 | Stream | Price |
 |---|---|
-| Free (history, books, group pots, basic tax) | ฿0 — growth engine |
+| Free (history, books, basic tax) | ฿0 — growth engine |
 | Personal Pro (forecast, full tax, unlimited history) — **main revenue** | ฿99 / month |
 | Business (multi-channel, receivables, multi-admin) | ฿299 / month |
 | Loan package | ฿990 each |
@@ -223,15 +218,14 @@ AI categorises everything; asks **only when unsure**, with one-tap buttons:
 
 ### Growth loops
 - **Zero-effort value:** connect once → history appears → merchant tells other merchants.
-- **Group pots** invite 3–10 friends each.
-- **Accounting firms** bring dozens of SMEs per sign-up.
+- **Accounting firms** bring dozens of sellers per sign-up.
 - **Moments:** tax season; BOT SME Credit Portal (Dec 2026).
 
 ## 10. Demo (2 min) — hero: Mae Fon, online seller
 1. Team member, as a customer, chats Mae Fon's **LINE OA**: "เอา 2 ชิ้นค่ะ" + slip → **dashboard records it live**; Mae Fon touched nothing.
 2. Another customer on her **Facebook Page** → also recorded → one unified history.
 3. **Judge adds the LINE OA and sends a slip** on stage → appears live.
-4. "Hua Hin trip" group pot: ฿4,800 from friends → tagged **reimbursement, not income**.
+4. ฿4,800 from Mae Fon's sister → one tap [ส่วนตัว] → tagged **personal, not income**.
 5. Insights: health score, "cash short on 28 Nov".
 6. Tax meter: "Real income ฿1.1M, not ฿1.9M."
 7. (One feature) LoanReady: readiness 52 → 81 → PDF; u-topia consent + audit trail.
@@ -244,7 +238,6 @@ AI categorises everything; asks **only when unsure**, with one-tap buttons:
 | Facebook Page webhook (team accounts) | Public Meta App Review, LINE partner connect |
 | Unified history + deposit classifier + slip guard | Advanced analytics |
 | Health score, simple forecast, tax meter (3 numbers) | Filing forms |
-| 1 group pot with reimbursement tagging | Full split/settle flow |
 | Readiness score + PDF; consent + audit trail; mocked u-topia ID | Real KYC, lender hand-off |
 | Voice note → entry (ElevenLabs STT) | Hotline, interview agent (if time) |
 
@@ -253,7 +246,7 @@ AI categorises everything; asks **only when unsure**, with one-tap buttons:
 ## 12. Risks → mitigations
 | Risk | Mitigation |
 |---|---|
-| Chat capture also offered by Zwiz/Page365 | Pitch the layer on top (tax, group, forecast, credit); integrate with them later |
+| Chat capture also offered by Zwiz/Page365 | Pitch the layer on top (tax, forecast, credit); integrate with them later |
 | LINE OA allows one webhook (conflict with Zwiz) | Investigate LINE module/partner options; silent mode |
 | Meta dev mode limits who can message | Demo with team accounts; judge interaction via LINE |
 | LINE OA setup is technical for merchants | "Add us as admin, we set it up"; partner program later |

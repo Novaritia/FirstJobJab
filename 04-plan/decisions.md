@@ -39,6 +39,13 @@ Newest at the bottom. Format: Context / Options / Choice / Why.
 - **Context:** Bookkeeping-in-chat already exists (Parnuan, Zendai, FlowAccount AI Connector, PEAK). ~50 alternative ideas explored; most already existed, needed datasets, could be faked, or required bank access / licences.
 - **Choice:** Keep ChatCFO only as the core engine of a broader product.
 
-## 2026-10-15 — Idea: Univerxal 🔒
-- **Choice:** **Univerxal** — AI books, tax and credit for everyone who earns outside a payslip. Personal + Business + Group spaces; ChatCFO engine + LoanReady + group money + u-topia credit/identity/compliance layer. Full detail: `01-brainstorm/idea-univerxal.md`.
-- **Why:** Legal as a third party (upload only, never holds money or lends); verified problems (e-Payment reporting, 60–70% SME loan rejection); differentiated (deposit classifier separates reimbursements from income for tax and credit); multiple revenue streams; fits u-topia's credit/identity/compliance strength.
+## 2026-10-15 — Idea: Univerxal (unlocked — not chosen, idea still open)
+- **Choice:** **Univerxal** — AI books, tax and credit for everyone who earns outside a payslip. Personal + Business spaces; ChatCFO engine + LoanReady + u-topia credit/identity/compliance layer. Full detail: `01-brainstorm/idea-univerxal.md`.
+- **Why:** Legal as a third party (upload only, never holds money or lends); verified problems (e-Payment reporting, 60–70% SME loan rejection); differentiated (deposit classifier separates personal transfers from income for tax and credit); multiple revenue streams; fits u-topia's credit/identity/compliance strength.
+
+## 2026-10-15 — Univerxal dropped
+- **Choice:** Team no longer works on Univerxal. Idea still open.
+
+## 2026-10-15 — Scope: drop family / friends group money
+- **Choice:** Market is **merchants (merchant ↔ customer) and individuals (personal tax)** only. Group pots, bill split and the LINE group bot are removed.
+- **Why:** Keep the build on merchant ↔ customer capture, which already feeds personal tax. Family transfers stay as a deposit type so tax still excludes them.

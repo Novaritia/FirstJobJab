@@ -3,7 +3,7 @@ import { useState } from "react";
 import { FileUp } from "lucide-react";
 import { api, errorText, json } from "@/lib/api";
 import { CONSENTS, PiiForm } from "@/components/PiiForm";
-import { Button, ButtonLink, Card, ErrorNote, PageTitle } from "@/components/ui";
+import { Badge, Button, ButtonLink, Card, ErrorNote, PageTitle } from "@/components/ui";
 
 const STEPS = ["ความยินยอม", "ปลดล็อก PDF", "อัปโหลด"];
 
@@ -19,7 +19,7 @@ export default function Onboarding() {
     setBusy(true);
     setError("");
     try {
-      for (const c of CONSENTS) await api("/profile/consents", json("PUT", { purpose: c.purpose, granted: checked[c.purpose] }));
+      for (const c of CONSENTS.filter((x) => !x.required)) await api("/profile/consents", json("PUT", { purpose: c.purpose, granted: checked[c.purpose] }));
       setStep(1);
     } catch (err) {
       setError(errorText(err));
@@ -34,7 +34,7 @@ export default function Onboarding() {
       <ol className="mb-6 flex gap-2" aria-label="ขั้นตอน">
         {STEPS.map((s, i) => (
           <li key={s} aria-current={i === step ? "step" : undefined}
-            className={`flex-1 rounded-full px-3 py-2 text-center text-sm font-semibold ${i === step ? "bg-primary text-on-primary" : i < step ? "bg-success-bg text-success" : "bg-surface text-muted shadow-neu"}`}>
+            className={`flex-1 border-b-2 px-1 pb-2 text-sm font-semibold ${i === step ? "border-primary text-primary" : i < step ? "border-success text-success" : "border-line text-muted"}`}>
             {i < step ? "✅ " : `${i + 1}. `}{s}
           </li>
         ))}
@@ -44,20 +44,28 @@ export default function Onboarding() {
         <Card>
           <h2 className="mb-4 text-xl font-bold">ขอความยินยอม (PDPA)</h2>
           <form onSubmit={saveConsents} className="flex flex-col gap-3">
-            {CONSENTS.map((c) => (
-              <label key={c.purpose} className="flex cursor-pointer gap-3 rounded-2xl bg-surface-2 p-4">
+            <ul className="flex flex-col divide-y divide-line rounded border border-line">
+              {CONSENTS.filter((c) => c.required).map((c) => (
+                <li key={c.purpose} className="flex items-center justify-between gap-3 px-4 py-2.5 text-sm">
+                  <span>{c.title}</span><Badge kind="ok">✅ ยอมรับแล้ว</Badge>
+                </li>
+              ))}
+            </ul>
+            <p className="text-xs text-muted">ข้อที่จำเป็นยอมรับแล้วตอนสมัคร หากไม่ต้องการ ให้ลบบัญชีในหน้าตั้งค่า</p>
+            {CONSENTS.filter((c) => !c.required).map((c) => (
+              <label key={c.purpose} className="flex cursor-pointer gap-3 rounded bg-subtle p-4">
                 <input type="checkbox" className="mt-1 shrink-0" checked={checked[c.purpose]}
                   onChange={(e) => setChecked({ ...checked, [c.purpose]: e.target.checked })} />
                 <span>
                   <span className="font-semibold">{c.title}</span>{" "}
-                  <span className="text-sm text-muted">{c.required ? "(จำเป็น)" : "(ไม่บังคับ)"}</span>
+                  <span className="text-sm text-muted">(ไม่บังคับ)</span>
                   <span className="block text-sm text-muted">{c.text}</span>
                 </span>
               </label>
             ))}
             <p className="text-sm text-muted">ถอนความยินยอมได้ทุกเมื่อในหน้าตั้งค่า</p>
             {error && <ErrorNote>{error}</ErrorNote>}
-            <Button type="submit" disabled={!checked.planning || busy} className="self-start">ถัดไป</Button>
+            <Button type="submit" disabled={busy} className="self-start">ถัดไป</Button>
           </form>
         </Card>
       )}

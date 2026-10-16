@@ -3,6 +3,7 @@ import { existsSync, readFileSync } from 'node:fs';
 import * as argon2 from 'argon2';
 import { PrismaService } from './prisma.service.js';
 import { encryptStr, envKey } from './crypto.js';
+import { acceptConsents, needsReconsent } from './security-util.js';
 
 try { process.loadEnvFile('../../.env'); } catch { /* host env */ }
 
@@ -25,5 +26,6 @@ for (const purpose of ['planning', 'loan_summary']) {
     await prisma.consent.create({ data: { userId: user.id, purpose, granted: true, version: '2026-10-16' } });
   }
 }
+if (await needsReconsent(prisma, user.id)) await acceptConsents(prisma, user.id);
 console.log(`seeded ${email}`);
 await prisma.$disconnect();

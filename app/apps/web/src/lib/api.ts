@@ -4,8 +4,8 @@ import type {
 } from "@fjm/shared";
 
 // Types from app/API.md
-export type User = { id: string; email: string; displayName: string; hasPii: boolean; createdAt: string };
-export type Purpose = "planning" | "loan_summary" | "improve";
+export type User = { id: string; email: string; displayName: string; hasPii: boolean; createdAt: string; needsReconsent?: boolean };
+export type Purpose = "terms" | "privacy" | "planning" | "loan_summary" | "improve";
 export type Consent = { purpose: Purpose; granted: boolean; version: string; at: string };
 export type ReviewRow = ParsedRow & { index: number; ok: boolean; category: Category };
 export type UploadResult = {
@@ -25,6 +25,16 @@ export type TxEdit = { field: string; oldValue: string | null; newValue: string 
 export type Summary = { months: MonthSummary[]; topSpend: { category: Category; amount: number }[]; text: string };
 export type LoanReady = { continuousMonths: number; required: number; avgIncome: number; avgSpend: number; maxInstallment: number };
 export type AuditEntry = { action: string; target: string; at: string };
+export type LoginRow = { at: string; success: boolean; ip: string; device: string; location: string; current: boolean };
+export type SessionRow = { id: string; createdAt: string; lastSeenAt: string; device: string; location: string; current: boolean };
+export type ChatMsg = { role: "user" | "assistant"; content: string };
+export type DataRow = Record<string, string | number | null>;
+export type ChatReply = { reply: string; data?: DataRow[] };
+export type VoiceReply = ChatReply & { transcript: string; audio?: string };
+export type Slip = {
+  id: string; amount: number; date: string; time?: string; fromName?: string; toName?: string; bank?: string; ref?: string;
+  matchedTransactionId?: string | null; status: "matched" | "unmatched"; confidence: number;
+};
 export type { GrowthInput, GrowthPoint, TaxResult };
 
 export const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:4000";

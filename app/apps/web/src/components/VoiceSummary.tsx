@@ -27,8 +27,7 @@ export function VoiceSummary() {
 
   if (text.error && text.status !== 503) return null;
   return (
-    <Card>
-      <h2 className="mb-2 flex items-center gap-2 text-lg font-bold"><Headphones aria-hidden size={20} className="text-primary" /> สรุปสัปดาห์นี้</h2>
+    <Card title={<span className="flex items-center gap-2"><Headphones aria-hidden size={16} className="text-primary" /> สรุปสัปดาห์นี้</span>}>
       {text.data && <p className="text-muted">{text.data.text}</p>}
       {state === "unavailable" || text.status === 503 ? (
         <p className="mt-3 text-sm text-muted">เสียงสรุปยังไม่เปิดใช้งาน อ่านข้อความด้านบนแทนได้เลย</p>
@@ -36,7 +35,7 @@ export function VoiceSummary() {
         <>
           {!audio && (
             <Button onClick={play} disabled={state === "loading"} className="mt-4">
-              <Volume2 aria-hidden size={20} /> {state === "loading" ? "กำลังสร้างเสียง…" : "ฟังสรุป 30 วินาที"}
+              <Volume2 aria-hidden size={16} /> {state === "loading" ? "กำลังสร้างเสียง…" : "ฟังสรุป 30 วินาที"}
             </Button>
           )}
           {audio && <audio ref={ref} src={audio} controls autoPlay className="mt-4 w-full" aria-label="เสียงสรุปสัปดาห์นี้" />}

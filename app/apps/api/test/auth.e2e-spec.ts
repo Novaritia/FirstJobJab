@@ -3,6 +3,7 @@ import type { NestFastifyApplication } from '@nestjs/platform-fastify';
 import { createApp } from '../src/main.js';
 import { PrismaService } from '../src/prisma.service.js';
 import { verifyChain } from '../src/crypto.js';
+import { PRIVACY_VERSION, TERMS_VERSION } from '../src/security-util.js';
 
 describe('auth e2e', () => {
   let app: NestFastifyApplication;
@@ -15,9 +16,9 @@ describe('auth e2e', () => {
   });
   afterAll(() => app.close());
 
-  it('register → login → me → logout', async () => {
+  it('register → login → me → security → delete account', async () => {
     const f = app.getHttpAdapter().getInstance();
-    const reg = await f.inject({ method: 'POST', url: '/auth/register', payload: { email, password: 'longpassword1', displayName: 'E2E' } });
+    const reg = await f.inject({ method: 'POST', url: '/auth/register', payload: { email, password: 'longpassword1', displayName: 'E2E', acceptTerms: true, termsVersion: TERMS_VERSION, privacyVersion: PRIVACY_VERSION } });
     expect(reg.statusCode).toBe(201);
     expect(reg.json().user.email).toBe(email);
 
@@ -32,10 +33,20 @@ describe('auth e2e', () => {
 
     const me = await f.inject({ method: 'GET', url: '/auth/me', cookies: { sid: sid.value } });
     expect(me.statusCode).toBe(200);
-    expect(me.json().user).toMatchObject({ email, hasPii: false });
+    expect(me.json().user).toMatchObject({ email, hasPii: false, needsReconsent: false });
 
-    await f.inject({ method: 'POST', url: '/auth/logout', cookies: { sid: sid.value } });
+    const noTerms = await f.inject({ method: 'POST', url: '/auth/register', payload: { email: `x${email}`, password: 'longpassword1', displayName: 'X' } });
+    expect(noTerms.statusCode).toBe(400);
+    const withdraw = await f.inject({ method: 'PUT', url: '/profile/consents', cookies: { sid: sid.value }, payload: { purpose: 'terms', granted: false } });
+    expect(withdraw.json()).toEqual({ error: 'required_consent' });
+    const logins = (await f.inject({ method: 'GET', url: '/security/logins', cookies: { sid: sid.value } })).json().logins;
+    expect(logins.map((l: { success: boolean }) => l.success)).toEqual([true, false, true]);
+    expect(logins[0]).toMatchObject({ current: true, location: 'เครือข่ายภายใน' });
+
+    const del = await f.inject({ method: 'DELETE', url: '/account', cookies: { sid: sid.value }, payload: { password: 'longpassword1' } });
+    expect(del.statusCode).toBe(200);
     expect((await f.inject({ method: 'GET', url: '/auth/me', cookies: { sid: sid.value } })).statusCode).toBe(401);
+    expect((await f.inject({ method: 'POST', url: '/auth/login', payload: { email, password: 'longpassword1' } })).statusCode).toBe(401);
   });
 
   it('audit log chain is intact', async () => {

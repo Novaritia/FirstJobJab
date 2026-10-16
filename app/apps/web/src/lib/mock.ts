@@ -1,7 +1,7 @@
 // Dev-only mock of app/API.md, enabled with NEXT_PUBLIC_MOCK=1. In-memory, resets on reload.
 // shortcut: no persistence and loose validation; delete once the real API is stable.
 import type { Category, Direction } from "@fjm/shared";
-import type { AuditEntry, Consent, ReviewRow, Tx, TxEdit, UploadResult } from "./api";
+import type { AuditEntry, ChatMsg, Consent, ReviewRow, Slip, Tx, TxEdit, UploadResult } from "./api";
 
 const ok = (body: unknown, status = 200) =>
   new Response(JSON.stringify(body), { status, headers: { "Content-Type": "application/json" } });
@@ -126,6 +126,16 @@ function growth(body: { monthlySaving: number; annualReturn: number; years: numb
   return { points };
 }
 
+function chat(q: string) {
+  const s = summary(1);
+  const m = s.months[0];
+  if (/มากสุด|อะไร/.test(q)) return { reply: `เดือน ${m.month} ใช้กับค่าเช่ามากสุด รองลงมาคือครอบครัวและผ่อนบัตร`, data: s.topSpend.map((t) => ({ หมวด: t.category, จำนวน: `฿${(t.amount / 100).toLocaleString("th-TH")}` })) };
+  if (/ภาษี/.test(q)) return { reply: "ปีนี้น่าจะเสียภาษีประมาณ ฿850 (ประมาณการ ไม่ใช่คำแนะนำทางภาษี)" };
+  if (/กู้/.test(q)) return { reply: `ส่ง statement ต่อเนื่อง ${streakCurrent}/6 เดือน ผ่อนได้ไม่เกินประมาณ ฿11,200/เดือน` };
+  if (/streak|สตรีค/i.test(q)) return { reply: `streak ตอนนี้ ${streakCurrent} เดือน ยังขาด เม.ย. 69 รีบอัปโหลดก่อนธนาคารลบ` };
+  return { reply: `เดือนนี้ใช้ไป ฿${(m.spend / 100).toLocaleString("th-TH")} จากเงินเข้า ฿${(m.income / 100).toLocaleString("th-TH")}`, data: [{ รายการ: "เงินเข้า", จำนวน: m.income / 100 }, { รายการ: "ใช้ไป", จำนวน: m.spend / 100 }, { รายการ: "เหลือ", จำนวน: m.net / 100 }] };
+}
+
 export async function mockFetch(path: string, init: RequestInit): Promise<Response> {
   await new Promise((r) => setTimeout(r, 250));
   const method = (init.method ?? "GET").toUpperCase();
@@ -223,6 +233,18 @@ export async function mockFetch(path: string, init: RequestInit): Promise<Respon
       monthlySalaryWhereTaxStarts: 2629200,
     });
   }
+  if (p === "/chat") return ok(chat((body.messages as ChatMsg[]).at(-1)?.content ?? ""));
+  if (p === "/chat/voice") return err(503, "voice_unavailable");
+  if (p === "/slips") {
+    const files = (init.body as FormData).getAll("images") as File[];
+    const out: Slip[] = files.map((f, i) => ({
+      id: `slip${Date.now()}-${i}`, amount: i % 2 ? 35000 : 21500, date: "2026-09-06", time: "12:41",
+      fromName: "นางสาว มิ้นท์ ใจดี", toName: i % 2 ? "ร้านป้าแดง" : "GRAB FOOD", bank: "KBANK", ref: `${f.name.slice(0, 6)}${i}`,
+      matchedTransactionId: i % 2 ? null : "t2026-09-2", status: i % 2 ? "unmatched" : "matched", confidence: i % 2 ? 0.82 : 0.97,
+    }));
+    return ok({ slips: out });
+  }
+  if (/^\/slips\/[^/]+\/confirm$/.test(p)) return ok({ ok: true });
   if (p === "/streak") return ok(streak());
   if (p === "/voice/weekly") return err(503, "voice_unavailable");
   if (p === "/voice/weekly/text") return ok({ text: "สัปดาห์นี้ใช้ไป ฿3,200 จากงบ ฿4,000 เก่งมาก! ค่าอาหารลดลงจากสัปดาห์ก่อน 15%" });

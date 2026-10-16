@@ -6,6 +6,7 @@ import { PrismaService } from './prisma.service.js';
 import { AuthGuard, UserId } from './auth.js';
 import { StatsService, todayIct } from './stats.service.js';
 import { parse } from './validation.js';
+import { tts } from './elevenlabs.js';
 
 const Growth = z.object({
   monthlySaving: z.number().int().min(0).max(1e10),
@@ -55,19 +56,8 @@ export class InsightsController {
 
   @Get('voice/weekly')
   async weeklyVoice(@UserId() userId: string, @Res() res: FastifyReply) {
-    const key = process.env.ELEVENLABS_API_KEY;
-    const voice = process.env.ELEVENLABS_VOICE_ID;
-    if (!key || !voice) throw new HttpException('voice_unavailable', 503);
-    const text = await this.stats.weeklyText(userId);
-    const r = await fetch(`https://api.elevenlabs.io/v1/text-to-speech/${encodeURIComponent(voice)}?output_format=mp3_44100_128`, {
-      method: 'POST',
-      headers: { 'xi-api-key': key, 'content-type': 'application/json', accept: 'audio/mpeg' },
-      // eleven_multilingual_v2 has no Thai; v4 does (docs, 2026-10)
-      body: JSON.stringify({ text, model_id: process.env.ELEVENLABS_MODEL_ID || 'eleven_v4', language_code: 'th' }),
-      signal: AbortSignal.timeout(30_000),
-    });
-    if (!r.ok || !r.body) throw new HttpException(`tts_failed_${r.status}`, 502);
-    return res.header('content-type', 'audio/mpeg').header('cache-control', 'no-store').send(Buffer.from(await r.arrayBuffer()));
+    const audio = await tts(await this.stats.weeklyText(userId));
+    return res.header('content-type', 'audio/mpeg').header('cache-control', 'no-store').send(audio);
   }
 
   @Get('audit')

@@ -7,7 +7,7 @@ Every idea uses **U-Bot** as the brain and **ElevenLabs** as the voice; **Avalan
 
 | Idea | File | Status |
 |---|---|---|
-| **Univerxal** — books, tax, group money, credit (ChatCFO + LoanReady + u-topia) | [idea-univerxal.md](idea-univerxal.md) | 🔒 Locked |
+| **Univerxal** — books, tax, credit (ChatCFO + LoanReady + u-topia) | [idea-univerxal.md](idea-univerxal.md) | ❌ Dropped 2026-10-15 |
 | ChatCFO — chats → books, analysis, forecast, tax | [idea-chatcfo.md](idea-chatcfo.md) | Superseded (core engine of Univerxal) |
 
 ---

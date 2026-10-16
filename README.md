@@ -3,8 +3,8 @@
 Workspace for **U-Hackathon 2026** (hosted by u-topia at Flow Summit, Avani Sukhumvit Bangkok).
 Theme: *The future of AI and Finance*.
 
-## 🔒 Our project: Univerxal
-**"Your AI money assistant — automatic books and every money task, for everyone who earns outside a payslip."** Webhooks, LINE bot (slips, voice notes) and uploads → automatic books, analysis, forecast and personal tax; group money for family and friends; a bank-ready loan package carried to lenders through u-topia's identity and compliance layer.
+## ❌ Dropped (2026-10-15): Univerxal — idea still open, see `01-brainstorm/ideas.md`
+**"Your AI money assistant — automatic books and every money task, for everyone who earns outside a payslip."** For people and merchants **without a registered company**, easy enough for non-tech users (connect once, nothing to type). Webhooks, LINE bot (slips, voice notes) and uploads → automatic books, analysis, forecast and personal tax for merchants and individuals; a bank-ready loan package carried to lenders through u-topia's identity and compliance layer.
 Full idea: [`01-brainstorm/idea-univerxal.md`](01-brainstorm/idea-univerxal.md)
 
 ## Key facts
@@ -58,7 +58,7 @@ Full idea: [`01-brainstorm/idea-univerxal.md`](01-brainstorm/idea-univerxal.md)
 ## Status
 
 - [x] References collected (U-Bot guide, ElevenLabs hacker guide)
-- [x] Idea chosen: **Univerxal**
+- [ ] Idea chosen
 - [x] Track chosen: **AI**
 - [x] Stack chosen (Next.js + Claude API + TS engines)
 - [ ] App scaffolded

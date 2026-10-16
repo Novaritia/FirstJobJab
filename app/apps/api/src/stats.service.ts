@@ -97,7 +97,7 @@ export class StatsService {
     return summarizeMonths(txs).sort((a, b) => a.month.localeCompare(b.month));
   }
 
-  async summary(userId: string, n: number) {
+  async summary(userId: string, n: number, withText = true) {
     const months = (await this.monthSummaries(userId)).slice(-n);
     const totals: Partial<Record<Category, number>> = {};
     for (const m of months) for (const [c, v] of Object.entries(m.byCategory)) totals[c as Category] = (totals[c as Category] ?? 0) + (v ?? 0);
@@ -106,7 +106,7 @@ export class StatsService {
       .map(([category, amount]) => ({ category: category as Category, amount: amount as number }))
       .sort((a, b) => b.amount - a.amount)
       .slice(0, 5);
-    return { months, topSpend, text: await this.summaryText(months, topSpend) };
+    return { months, topSpend, text: withText ? await this.summaryText(months, topSpend) : '' };
   }
 
   private async summaryText(months: MonthSummary[], top: { category: Category; amount: number }[]) {

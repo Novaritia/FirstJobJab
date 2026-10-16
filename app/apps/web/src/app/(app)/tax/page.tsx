@@ -2,6 +2,8 @@
 import { useEffect, useState } from "react";
 import { api, errorText, type TaxResult } from "@/lib/api";
 import { baht } from "@/lib/format";
+import { Money, Stagger } from "@/components/motion";
+import { TaxCalc } from "@/components/TaxCalc";
 import { ButtonLink, Card, ErrorNote, Loading, PageTitle } from "@/components/ui";
 
 export default function Tax() {
@@ -17,7 +19,7 @@ export default function Tax() {
   const t = res.data!;
 
   return (
-    <div className="mx-auto max-w-3xl">
+    <Stagger className="mx-auto max-w-5xl">
       <PageTitle title={`ภาษีปี ${res.year + 543}`} sub="ประมาณจากเงินเดือนใน statement และประกันสังคม" />
 
       {t.grossIncome === 0 ? (
@@ -28,10 +30,10 @@ export default function Tax() {
         </Card>
       ) : (
         <div className="grid gap-5 md:grid-cols-2">
-          <section className="glass-hero rounded-3xl p-6 md:col-span-2">
-            <h2 className="text-sm opacity-90">ภาษีที่น่าจะต้องจ่ายทั้งปี</h2>
-            <p className="num mt-1 font-display text-5xl font-bold">{baht(t.tax, 0)}</p>
-            <p className="mt-3 opacity-90">
+          <section className="rounded-md border border-line bg-surface p-5 md:col-span-2">
+            <h2 className="text-sm text-muted">ภาษีที่น่าจะต้องจ่ายทั้งปี</h2>
+            <p className="mt-1 text-4xl font-semibold text-primary"><Money value={t.tax} digits={0} /></p>
+            <p className="mt-2 text-muted">
               {t.tax === 0 ? "ปีนี้ยังไม่ต้องเสียภาษี แต่ยังต้องยื่นแบบ ภ.ง.ด.91 นะ" : `เฉลี่ยเดือนละ ${baht(t.tax / 12, 0)}`}
             </p>
           </section>
@@ -42,7 +44,7 @@ export default function Tax() {
               <Row label="รายได้ทั้งปี" value={baht(t.grossIncome, 0)} />
               <Row label="หักค่าใช้จ่าย" value={`− ${baht(t.expenseDeduction, 0)}`} />
               <Row label="ลดหย่อน (ส่วนตัว + ประกันสังคม ฯลฯ)" value={`− ${baht(t.allowances, 0)}`} />
-              <div className="my-1 border-t border-muted/25" />
+              <div className="my-1 border-t border-line" />
               <Row label="เงินได้สุทธิ" value={baht(t.netIncome, 0)} strong />
             </dl>
           </Card>
@@ -55,7 +57,7 @@ export default function Tax() {
               </thead>
               <tbody className="num">
                 {t.brackets.map((b) => (
-                  <tr key={b.from} className="border-t border-muted/15">
+                  <tr key={b.from} className="border-t border-line">
                     <td className="py-2">{baht(b.from, 0)} – {b.to === null ? "ขึ้นไป" : baht(b.to, 0)}</td>
                     <td className="py-2">{Math.round(b.rate * 100)}%</td>
                     <td className="py-2 text-right font-semibold">{baht(b.tax, 0)}</td>
@@ -73,10 +75,11 @@ export default function Tax() {
           </Card>
         </div>
       )}
-      <p role="note" className="mt-5 rounded-2xl bg-warning-bg p-4 text-sm font-medium text-warning">
+      <div className="mt-5"><TaxCalc year={res.year} monthlySalary={Math.round(t.grossIncome / 12)} /></div>
+      <p role="note" className="mt-5 rounded bg-warning-bg p-4 text-sm font-medium text-warning">
         ⚠️ ประมาณการ ไม่ใช่คำแนะนำทางภาษี ตรวจสอบกับกรมสรรพากรก่อนยื่นจริง
       </p>
-    </div>
+    </Stagger>
   );
 }
 

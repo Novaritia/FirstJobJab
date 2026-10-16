@@ -1,5 +1,7 @@
 # Architecture — ChatCFO
 
+> Primary input is now chat webhooks (LINE, Facebook, Instagram) — see [`capture-flows.md`](capture-flows.md). Upload below stays as fallback.
+
 ```mermaid
 flowchart LR
   S[Seller - browser] -->|LINE chat .txt + slip/receipt images| UP[Upload page]

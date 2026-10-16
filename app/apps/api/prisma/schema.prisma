@@ -15,6 +15,9 @@ model User {
   passwordHash String
   displayName  String
   createdAt    DateTime @default(now())
+  /// set on account delete: row kept (anonymised) so consents + audit_log stay as legal proof
+  deletedAt    DateTime?
+  loginEvents  LoginEvent[]
   sessions     Session[]
   pii          Pii?
   consents     Consent[]
@@ -22,6 +25,7 @@ model User {
   uploads      Upload[]
   transactions Transaction[]
   rules        CategoryRule[]
+  slips        Slip[]
 
   @@map("users")
 }
@@ -31,8 +35,11 @@ model Session {
   tokenHash String   @unique
   userId    String
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  createdAt DateTime @default(now())
-  expiresAt DateTime
+  createdAt  DateTime @default(now())
+  expiresAt  DateTime
+  lastSeenAt DateTime @default(now())
+  device     String?
+  location   String?
 
   @@map("sessions")
 }
@@ -169,4 +176,46 @@ model AuditLog {
 
   @@index([userId, at])
   @@map("audit_log")
+}
+
+/// Transfer slip read by OCR. The image itself is never stored (privacy): only its hash + extracted fields.
+model Slip {
+  id                   String   @id @default(uuid())
+  userId               String
+  user                 User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  sha256               String
+  qrRef                String?
+  ref                  String?
+  bank                 String?
+  date                 String?
+  time                 String?
+  amount               Int?
+  toName               String?
+  confidence           Float
+  status               String
+  matchedTransactionId String?
+  createdAt            DateTime @default(now())
+
+  @@unique([userId, sha256])
+  @@index([userId, qrRef])
+  @@map("slips")
+}
+
+/// Login history shown to the user. Retention: 90 days (pruned on each login of that user).
+model LoginEvent {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  at        DateTime @default(now())
+  success   Boolean
+  /// AES-256-GCM (PII_KEY) so the user can see their own IP; ipHmac for abuse matching
+  ipEnc     String?
+  ipHmac    String?
+  userAgent String?
+  device    String?
+  location  String?
+  sessionId String?
+
+  @@index([userId, at])
+  @@map("login_events")
 }
