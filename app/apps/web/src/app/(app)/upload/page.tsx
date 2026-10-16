@@ -3,7 +3,7 @@ import { useRef, useState } from "react";
 import { BookOpen, Camera, CircleCheck, FileUp, Hand, ImagePlus, KeyRound, Loader2, TriangleAlert, X } from "lucide-react";
 import { motion } from "motion/react";
 import { EASE, Flame, Rolling } from "@/components/motion";
-import type { Direction } from "@fjm/shared";
+import { BANK_NAMES, type Direction } from "@fjm/shared";
 import { ApiError, api, errorText, json, type ReviewRow, type Slip, type Streak, type UploadResult } from "@/lib/api";
 import { baht, dateLabel, toSatang } from "@/lib/format";
 import { Badge, Button, ButtonLink, Card, ErrorNote, Field, PageTitle, RequiredLegend, cx } from "@/components/ui";
@@ -257,13 +257,15 @@ function UploadItem({ item, onRetry, onConfirmed, onUpdate }: {
   const failing = r.rows.filter((row) => !row.ok);
   const passing = r.rows.filter((row) => row.ok);
   const expected = new Map(r.check.rows.map((c) => [c.index, c.expectedBalance]));
-  const allOk = r.check.failCount === 0;
+  // wallet histories: no per-row balance → verified only if printed totals reconcile, else the user accepts in bulk
+  const unverified = !!r.check.mode && r.check.mode !== "per_row" && !r.check.totalsOk;
+  const allOk = r.check.failCount === 0 && !unverified;
 
-  async function confirm() {
+  async function confirm(acceptUnverified = false) {
     setBusy(true);
     setError("");
     try {
-      const res = await api<{ imported: number; streak: Streak | number }>(`/uploads/${r!.uploadId}/confirm`, json("POST"));
+      const res = await api<{ imported: number; streak: Streak | number }>(`/uploads/${r!.uploadId}/confirm`, json("POST", acceptUnverified ? { acceptUnverified } : undefined));
       onConfirmed(res.imported, typeof res.streak === "number" ? res.streak : res.streak.current);
     } catch (e) {
       setError(e instanceof ApiError && e.status === 409 ? "ยังมีแถวที่ยอดไม่ตรง แก้ให้ครบก่อนยืนยัน" : errorText(e));
@@ -277,11 +279,15 @@ function UploadItem({ item, onRetry, onConfirmed, onUpdate }: {
       <header className="border-b border-line px-5 py-3">
         <h2 className="font-semibold">
           อ่าน <span className="num">{r.rows.length}</span> รายการ{" "}
-          <span className="inline-flex items-center gap-1 text-success"><CircleCheck aria-hidden size={14} />ยอดคงเหลือตรง <span className="num">{r.check.okCount}</span> แถว</span>{" "}
-          <span className={cx("inline-flex items-center gap-1", allOk ? "text-muted" : "text-warning")}><TriangleAlert aria-hidden size={14} />ไม่ตรง <span className="num">{r.check.failCount}</span> แถว</span>
+          {unverified ? (
+            <span className="inline-flex items-center gap-1 text-warning"><Hand aria-hidden size={14} />ตรวจยอดไม่ได้ <span className="num">{r.rows.length}</span> แถว</span>
+          ) : (<>
+            <span className="inline-flex items-center gap-1 text-success"><CircleCheck aria-hidden size={14} />{r.check.mode === "totals" ? "ยอดรวมตรง" : "ยอดคงเหลือตรง"} <span className="num">{r.check.okCount}</span> แถว</span>{" "}
+            <span className={cx("inline-flex items-center gap-1", allOk ? "text-muted" : "text-warning")}><TriangleAlert aria-hidden size={14} />ไม่ตรง <span className="num">{r.check.failCount}</span> แถว</span>
+          </>)}
         </h2>
         <p className="mt-0.5 flex flex-wrap gap-x-2 text-sm text-muted">
-          <span>{r.bank === "KBANK" ? "KBank" : "Bangkok Bank"}</span>
+          <span>{BANK_NAMES[r.bank] ?? r.bank}</span>
           <span>{r.accountNoMasked}</span>
           <span>{dateLabel(r.period.start)} – {dateLabel(r.period.end)}</span>
           <span className="truncate">· {nameOf(item)}</span>
@@ -291,14 +297,23 @@ function UploadItem({ item, onRetry, onConfirmed, onUpdate }: {
       <ol aria-hidden className="flex flex-wrap gap-1 border-b border-line px-5 py-2.5">
         {r.rows.map((row, i) => (
           <motion.li key={row.index} title={`แถว ${row.index + 1}`}
-            className={cx("size-2.5 rounded-[2px] transition-colors duration-300", row.ok ? "bg-success" : "bg-warning")}
+            className={cx("size-2.5 rounded-[2px] transition-colors duration-300", unverified ? "bg-line" : row.ok ? "bg-success" : "bg-warning")}
             initial={{ opacity: 0, scale: 0.4 }} animate={{ opacity: 1, scale: 1 }}
             transition={{ duration: 0.18, ease: EASE, delay: i * Math.min(0.03, 1 / r.rows.length) }} />
         ))}
       </ol>
       {!r.check.totalsOk && allOk && <p className="flex items-center gap-1.5 border-b border-line bg-warning-bg px-5 py-2 text-sm text-warning"><TriangleAlert aria-hidden size={14} className="shrink-0" />ยอดรวมยังไม่ตรงกับสรุปท้าย statement</p>}
 
-      {failing.length > 0 && (
+      {unverified && (
+        <p className="flex items-start gap-1.5 border-b border-line bg-warning-bg px-5 py-2 text-sm text-warning">
+          <Hand aria-hidden size={14} className="mt-0.5 shrink-0" />
+          {r.check.mode === "none"
+            ? "✋ ตรวจยอดไม่ได้ (ไม่มียอดคงเหลือ) — ไฟล์นี้ไม่มียอดคงเหลือหรือยอดรวมให้เทียบ ตรวจรายการด้านล่างเองแล้วกดยืนยันทั้งหมด รายการจะถูกบันทึกว่า ยังไม่ตรวจยอด"
+            : "✋ ยอดรวมไม่ตรงกับยอดต้นงวด/ปลายงวด — ตรวจรายการด้านล่าง ถ้าถูกแล้วกดยืนยันทั้งหมด รายการจะถูกบันทึกว่า ยังไม่ตรวจยอด"}
+        </p>
+      )}
+
+      {!unverified && failing.length > 0 && (
         <div className="flex flex-col gap-3 border-b border-line p-5">
           <p className="text-sm text-muted">แก้ตัวเลขให้ตรงกับ PDF หรือสมุดบัญชี แถวจะผ่านเมื่อ ยอดก่อนหน้า ± จำนวนเงิน = ยอดคงเหลือ</p>
           {failing.map((row) => (
@@ -309,9 +324,9 @@ function UploadItem({ item, onRetry, onConfirmed, onUpdate }: {
         </div>
       )}
 
-      {passing.length > 0 && (
-        <details className="border-b border-line">
-          <summary className="flex min-h-11 cursor-pointer items-center px-5 text-sm font-medium text-primary hover:bg-subtle">ดูแถวที่ผ่าน ({passing.length})</summary>
+      {(unverified ? r.rows : passing).length > 0 && (
+        <details className="border-b border-line" open={unverified}>
+          <summary className="flex min-h-11 cursor-pointer items-center px-5 text-sm font-medium text-primary hover:bg-subtle">{unverified ? `ดูทุกแถว (${r.rows.length})` : `ดูแถวที่ผ่าน (${passing.length})`}</summary>
           <table className="w-full text-sm">
             <thead className="bg-subtle text-left text-muted">
               <tr>
@@ -322,14 +337,14 @@ function UploadItem({ item, onRetry, onConfirmed, onUpdate }: {
               </tr>
             </thead>
             <tbody className="num divide-y divide-line">
-              {passing.map((row) => (
+              {(unverified ? r.rows : passing).map((row) => (
                 <tr key={row.index}>
                   <td className="px-5 py-2 whitespace-nowrap text-muted">{dateLabel(row.date)}</td>
                   <td className="max-w-0 truncate px-2 py-2">{row.description}</td>
                   <td className={cx("px-2 py-2 text-right font-medium whitespace-nowrap", row.direction === "in" && "text-success")}>
                     {row.direction === "in" ? "+" : "−"}{baht(row.amount)}
                   </td>
-                  <td className="px-5 py-2 text-right whitespace-nowrap text-muted max-sm:hidden">{baht(row.balance)}</td>
+                  <td className="px-5 py-2 text-right whitespace-nowrap text-muted max-sm:hidden">{row.balance == null ? "–" : baht(row.balance)}</td>
                 </tr>
               ))}
             </tbody>
@@ -339,9 +354,13 @@ function UploadItem({ item, onRetry, onConfirmed, onUpdate }: {
 
       <footer className="flex flex-wrap items-center justify-end gap-3 bg-subtle px-5 py-3">
         {error && <div className="w-full"><ErrorNote>{error}</ErrorNote></div>}
-        <Button onClick={confirm} disabled={!allOk || busy} className="max-sm:w-full">
-          {allOk ? "ยืนยันนำเข้า" : `แก้อีก ${r.check.failCount} แถวก่อนยืนยัน`}
-        </Button>
+        {unverified ? (
+          <Button onClick={() => confirm(true)} disabled={busy} className="max-sm:w-full">ยืนยันทั้งหมด {r.rows.length} แถว (ยังไม่ตรวจยอด)</Button>
+        ) : (
+          <Button onClick={() => confirm()} disabled={!allOk || busy} className="max-sm:w-full">
+            {allOk ? "ยืนยันนำเข้า" : `แก้อีก ${r.check.failCount} แถวก่อนยืนยัน`}
+          </Button>
+        )}
       </footer>
     </section>
   );
@@ -386,7 +405,7 @@ function FailRow({ row, expected, uploadId, onResult }: {
     <form onSubmit={recheck} className="rounded border border-warning/30 bg-warning-bg p-4" aria-labelledby={`${id}-t`}>
       <p id={`${id}-t`} className="font-semibold"><Badge kind="warn"><TriangleAlert aria-hidden size={14} /> ไม่ตรง</Badge> <span className="ml-1">แถว {row.index + 1}: {row.description}</span></p>
       <p className="mt-1 text-sm text-muted">
-        ยอดคงเหลือใน PDF <span className="num font-semibold text-text">{baht(row.balance)}</span>
+        ยอดคงเหลือใน PDF <span className="num font-semibold text-text">{row.balance == null ? "–" : baht(row.balance)}</span>
         {expected !== undefined && <> แต่คำนวณได้ <span className="num font-semibold text-text">{baht(expected)}</span></>}
       </p>
       <div className="mt-3 grid gap-3 sm:grid-cols-[1fr_auto_auto_auto] sm:items-end">

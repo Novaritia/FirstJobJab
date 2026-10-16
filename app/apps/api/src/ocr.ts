@@ -53,6 +53,7 @@ export async function ocrImage(img: Buffer, scale = 1): Promise<{ lines: string[
   if (p) return p;
   if (scale !== 1) {
     const im = await loadImage(img);
+    if (im.width * scale > 2400) scale = Math.max(1, 2400 / im.width); // big phone photos: upsampling only costs time
     const cv = createCanvas(Math.round(im.width * scale), Math.round(im.height * scale));
     const g = cv.getContext('2d');
     g.filter = 'grayscale(1)';
@@ -171,9 +172,9 @@ export async function readSlip(img: Buffer): Promise<SlipRead> {
 }
 
 /** OCR every rendered page; returns text lines in reading order (same shape as pdfItemsToLines output). */
-export async function ocrPages(pngs: Buffer[]): Promise<string[]> {
+export async function ocrPages(pngs: Buffer[], scale = 1): Promise<string[]> {
   const out: string[] = [];
-  for (const p of pngs) out.push(...(await ocrImage(p)).lines);
+  for (const p of pngs) out.push(...(await ocrImage(p, scale)).lines);
   // OCR drops/garbles date separators (2809-26, 22.0926); the row parser needs dd-mm-yy
   return out.map((l) => l.replace(/^(\d{2})[-/.]?(\d{2})[-/.]?(\d{2}(?:\d{2})?)(?=\s)/, '$1-$2-$3'));
 }

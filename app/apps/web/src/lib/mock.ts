@@ -82,12 +82,12 @@ function recheck(u: MockUpload) {
   const rows = u.rows.map((r) => {
     const expectedBalance = prev + (r.direction === "in" ? r.amount : -r.amount);
     const okRow = expectedBalance === r.balance;
-    prev = r.balance;
+    prev = r.balance ?? expectedBalance;
     return { index: r.index, ok: okRow, expectedBalance };
   });
   u.rows = u.rows.map((r, i) => ({ ...r, ok: rows[i].ok }));
   const okCount = rows.filter((r) => r.ok).length;
-  u.check = { rows, totalsOk: okCount === rows.length, okCount, failCount: rows.length - okCount };
+  u.check = { mode: "per_row", rows, totalsOk: okCount === rows.length, okCount, failCount: rows.length - okCount };
 }
 function newUpload(name: string): MockUpload {
   const id = `up${Object.keys(uploads).length + 2}`;
@@ -109,7 +109,7 @@ function newUpload(name: string): MockUpload {
   const u: MockUpload = {
     uploadId: id, bank: name.toLowerCase().includes("bbl") ? "BBL" : "KBANK",
     period: { start: "2026-04-01", end: "2026-04-30" }, accountNoMasked: "xxx-x-x1234-x", rows, opening,
-    check: { rows: [], totalsOk: false, okCount: 0, failCount: 0 },
+    check: { mode: "per_row", rows: [], totalsOk: false, okCount: 0, failCount: 0 },
   };
   recheck(u);
   return (uploads[id] = u);

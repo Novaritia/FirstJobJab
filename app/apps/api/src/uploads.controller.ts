@@ -5,7 +5,7 @@ import { mkdir, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { z } from 'zod';
 import {
-  checkBalances, detectBank, parsePassbook, parseStatement, pdfItemsToLines, pdfPasswordCandidates,
+  BANKS, checkBalances, parsePassbook, parseStatement, pdfItemsToLines, pdfPasswordCandidates,
   type BalanceCheckResult, type Bank, type Category, type ParsedStatement,
 } from '@fjm/shared';
 import { PrismaService } from './prisma.service.js';
@@ -23,7 +23,7 @@ export const UPLOAD_DIR = join(process.cwd(), 'uploads');
 export const MAX_PDF_BYTES = 10 * 1024 * 1024;
 const MAX_OCR_PAGES = 15; // ~2.5 s/page on CPU
 const MAX_PAGE_BYTES = 10 * 1024 * 1024;
-const BANKS: Bank[] = ['KBANK', 'BBL'];
+const ConfirmBody = z.object({ acceptUnverified: z.boolean().optional() }); // needed when nothing printed can verify the rows
 
 interface Parsed { statement: ParsedStatement; categories: Category[] }
 
@@ -77,8 +77,6 @@ export class UploadsController {
       lines = await ocrPages(await renderPdfPages(file, opened.password));
     }
     opened.password = undefined;
-    const bank = detectBank(lines);
-    if (!bank) throw new HttpException('unsupported_bank', 422);
     let statement: ParsedStatement;
     try {
       statement = parseStatement(lines);
@@ -97,7 +95,7 @@ export class UploadsController {
       if (part.type === 'file') {
         if (part.fieldname !== 'images') { part.file.resume(); continue; }
         pages.push(await part.toBuffer()); // throws 413 when over fileSize
-      } else if (part.fieldname === 'bank' && BANKS.includes(part.value as Bank)) bank = part.value as Bank;
+      } else if (part.fieldname === 'bank' && (BANKS as readonly string[]).includes(part.value as string)) bank = part.value as Bank;
     }
     if (!pages.length) throw new HttpException('images_required', 400);
     if (pages.some((p) => !mimeOf(p))) throw new HttpException('not_an_image', 415);
@@ -108,7 +106,7 @@ export class UploadsController {
     }
     let statement: ParsedStatement;
     try {
-      statement = parsePassbook(await ocrPages(pages), bank);
+      statement = parsePassbook(await ocrPages(pages, 1.5), bank);
     } catch {
       throw new HttpException('unsupported_format', 422);
     }
@@ -190,11 +188,15 @@ export class UploadsController {
 
   @Post(':id/confirm')
   @HttpCode(200)
-  async confirm(@UserId() userId: string, @Param('id') id: string, @NestReq() req: Req) {
+  async confirm(@UserId() userId: string, @Param('id') id: string, @Body() body: unknown, @NestReq() req: Req) {
+    const { acceptUnverified } = parse(ConfirmBody, body ?? {});
     const { parsed } = await this.pending(userId, id);
     const s = parsed.statement;
     const check = checkBalances(s);
-    if (check.failCount > 0 || !check.totalsOk) throw new HttpException('balance_check_failed', 409);
+    // per_row: every row must reconcile. totals/none (wallets): import as verified only if the sum reconciles, else on explicit accept
+    if (check.mode === 'per_row' && (check.failCount > 0 || !check.totalsOk)) throw new HttpException('balance_check_failed', 409);
+    if (check.mode !== 'per_row' && !check.totalsOk && !acceptUnverified) throw new HttpException('unverified_needs_accept', 409);
+    const verified = check.totalsOk;
 
     const imported = await this.prisma.$transaction(async (tx) => {
       // status guard inside the tx: a double-click confirm imports once
@@ -220,7 +222,7 @@ export class UploadsController {
         return [{
           userId, accountId: account.id, uploadId: id, date: r.date, time: r.time ?? null, description: r.description,
           channel: r.channel ?? null, amount: r.amount, direction: r.direction, balance: r.balance,
-          category: parsed.categories[i], source: 'statement', verified: true,
+          category: parsed.categories[i], source: 'statement', verified,
         }];
       });
       const created = await tx.transaction.createManyAndReturn({ data, select: { id: true, date: true, time: true, amount: true, direction: true } });

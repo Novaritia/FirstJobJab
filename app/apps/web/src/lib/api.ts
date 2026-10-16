@@ -86,7 +86,7 @@ export const json = (method: string, body?: unknown): RequestInit =>
 export function errorText(e: unknown): string {
   if (e instanceof ApiError) {
     if (e.status === 401) return "อีเมลหรือรหัสผ่านไม่ถูกต้อง";
-    if (e.message === "unsupported_format") return "อ่านไฟล์นี้ไม่ได้ — ตอนนี้รองรับ statement KBank และ Bangkok Bank";
+    if (e.message === "unsupported_format") return "อ่านรายการในไฟล์นี้ไม่ได้ — ลองไฟล์ statement ที่ชัดกว่านี้ หรือถ่ายรูปให้เห็นทั้งตาราง";
     if (e.message === "slip_incomplete") return "อ่านยอดหรือวันที่จากสลิปไม่ได้ เพิ่มเป็นรายการเองแทนได้";
     if (e.message === "slip_not_unmatched") return "สลิปนี้เพิ่มหรือจับคู่ไปแล้ว";
     if (e.message === "not_an_image") return "รองรับเฉพาะรูป JPG/PNG";

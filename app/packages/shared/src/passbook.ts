@@ -1,4 +1,5 @@
 import type { Bank, Direction, ParsedRow, ParsedStatement } from './contract';
+import { bankFromText, parseGenericStatement } from './statement';
 
 // Passbook (สมุดบัญชี) page photos → OCR lines → rows. Columns: date | code | withdrawal | deposit | balance | teller.
 // OCR collapses the empty column, so direction comes from the balance delta, not position.
@@ -43,17 +44,19 @@ function isoDate(d: string, m: string, y: string): string | null {
   return `${year}-${m.padStart(2, '0')}-${d.padStart(2, '0')}`;
 }
 
-function detect(text: string): Bank | null {
-  if (/KASIKORN|กสิกร|KBank/i.test(text)) return 'KBANK';
-  if (/BANGKOK BANK|กรุงเทพ|Bualuang|บัวหลวง/i.test(text)) return 'BBL';
-  return null;
+/** Pages' OCR lines in order. `bank` overrides detection (inner pages have no logo); unknown bank → 'OTHER'.
+ *  Unknown layout → generic statement parser. Throws Error('unsupported_format') only if no rows at all. */
+export function parsePassbook(lines: string[], bank?: Bank): ParsedStatement {
+  const b = bank ?? bankFromText(lines.join('\n'));
+  try {
+    return parsePassbookLayout(lines, b);
+  } catch {
+    return parseGenericStatement(lines.map(normalizePassbookLine), b);
+  }
 }
 
-/** Pages' OCR lines in order. `bank` overrides detection (inner pages have no logo). Throws Error('unsupported_format'). */
-export function parsePassbook(lines: string[], bank?: Bank): ParsedStatement {
+function parsePassbookLayout(lines: string[], bank: Bank): ParsedStatement {
   const norm = lines.map(normalizePassbookLine).filter(Boolean);
-  bank ??= detect(lines.join('\n')) ?? undefined;
-  if (!bank) throw new Error('unsupported_format');
 
   let opening: number | undefined;
   let prev: number | undefined;

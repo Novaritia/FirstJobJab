@@ -4,3 +4,5 @@ dist
 .next
 uploads
 *.log
+real-samples/
+*.err

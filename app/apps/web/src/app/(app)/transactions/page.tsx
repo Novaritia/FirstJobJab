@@ -3,7 +3,7 @@ import { Suspense, useEffect, useRef, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { Sheet, SheetClose, SheetContent, SheetTitle } from "@/components/shadcn/sheet";
 import { BadgeCheck, ChevronLeft, ChevronRight, Eye, EyeOff, Hand, History, Pencil, Plus, Search, SlidersHorizontal, X } from "lucide-react";
-import { CATEGORIES, type Category, type Direction } from "@fjm/shared";
+import { BANK_NAMES, CATEGORIES, type Bank, type Category, type Direction } from "@fjm/shared";
 import { api, apiRaw, errorText, json, type Tx, type TxEdit } from "@/lib/api";
 import { CATEGORY_LABEL, baht, dateLabel, toSatang } from "@/lib/format";
 import { ExportDialog } from "@/components/ExportDialog";
@@ -19,7 +19,7 @@ const SORTS = { date_desc: "ใหม่สุดก่อน", date_asc: "เ�
 const FILTER_KEYS = ["q", "direction", "category", "accountId", "from", "to", "min", "max", "hidden"];
 const nf = new Intl.NumberFormat("th-TH");
 const HIDDEN_NOTE = "ซ่อนแล้ว: ไม่นับในสรุปและกราฟ แต่ยังเก็บไว้เป็นหลักฐาน";
-const acctLabel = (a: Account) => (a.bank === "CASH" ? a.accountName ?? "เงินสด" : `${a.bank} ${a.accountNoMasked}`);
+const acctLabel = (a: Account) => (a.bank === "CASH" ? a.accountName ?? "เงินสด" : `${BANK_NAMES[a.bank as Bank] ?? a.bank} ${a.accountNoMasked}`);
 
 /** URL query → API query. The URL keeps amounts in baht (min/max) so it reads well; the API wants satang. */
 function apiQuery(sp: URLSearchParams) {

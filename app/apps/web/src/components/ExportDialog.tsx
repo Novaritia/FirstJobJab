@@ -3,6 +3,7 @@ import { useEffect, useState, type ReactNode } from "react";
 import Link from "next/link";
 import { toast } from "sonner";
 import { Download } from "lucide-react";
+import { BANK_NAMES, type Bank } from "@fjm/shared";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/shadcn/dialog";
 import { Button, Field, cx } from "@/components/ui";
 import { ApiError, api, apiRaw, errorText, type Profile } from "@/lib/api";
@@ -123,7 +124,7 @@ export function ExportDialog({ trigger, accounts = [] }: { trigger?: ReactNode; 
               <Field label="บัญชี">
                 <select value={accountId} onChange={(e) => setAccountId(e.target.value)}>
                   <option value="">ทุกบัญชี</option>
-                  {accounts.map((a) => <option key={a.id} value={a.id}>{a.bank === "CASH" ? a.accountName ?? "เงินสด" : `${a.bank} ${a.accountNoMasked}`}</option>)}
+                  {accounts.map((a) => <option key={a.id} value={a.id}>{a.bank === "CASH" ? a.accountName ?? "เงินสด" : `${BANK_NAMES[a.bank as Bank] ?? a.bank} ${a.accountNoMasked}`}</option>)}
                 </select>
               </Field>
             )}

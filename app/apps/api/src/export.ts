@@ -3,7 +3,7 @@ import PDFDocument from 'pdfkit';
 import { existsSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import type { Category, TaxResult } from '@fjm/shared';
+import { BANK_NAMES, type Category, type TaxResult } from '@fjm/shared';
 import { CATEGORY_TH } from './stats.service.js';
 
 export interface ExportRow {
@@ -11,7 +11,7 @@ export interface ExportRow {
   direction: string; amount: number; balance: number | null; source: string; channel: string | null; note: string | null; verified: boolean;
 }
 
-const BANK_TH: Record<string, string> = { KBANK: 'กสิกรไทย', BBL: 'กรุงเทพ', SCB: 'ไทยพาณิชย์', KTB: 'กรุงไทย', BAY: 'กรุงศรีอยุธยา', TTB: 'ทีทีบี', GSB: 'ออมสิน', CASH: 'เงินสด' };
+const BANK_TH: Record<string, string> = { ...BANK_NAMES, CASH: 'เงินสด' };
 const SOURCE_TH: Record<string, string> = { statement: 'รายการเดินบัญชี', slip: 'สลิปโอนเงิน', manual: 'บันทึกเอง', passbook: 'สมุดบัญชี' };
 
 export const accountLabel = (r: Pick<ExportRow, 'bank' | 'accountNoMasked'>) => r.bank === 'CASH' ? 'เงินสด' : `${BANK_TH[r.bank] ?? r.bank} ${r.accountNoMasked}`;

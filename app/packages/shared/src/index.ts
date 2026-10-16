@@ -1,6 +1,6 @@
 export * from './contract';
 // Keep pure (no fs/network/pdfjs) so api and web can both use them.
-export { pdfItemsToLines, detectBank, parseStatement, pdfPasswordCandidates } from './statement';
+export { pdfItemsToLines, detectBank, bankFromText, parseStatement, parseGenericStatement, pdfPasswordCandidates } from './statement';
 export { checkBalances } from './balance';
 export { parsePassbook, normalizePassbookLine } from './passbook';
 export { guessCategory, detectOwnTransfers, summarizeMonths } from './categorize';

@@ -66,8 +66,8 @@ describe('parsePassbook', () => {
     expect(s.rows[2].amount).toBe(0);
   });
 
-  it('bank override for inner pages; rejects junk', () => {
-    expect(() => parsePassbook(['01/10/69 TRF 1.00 2.00'])).toThrow('unsupported_format');
+  it('bank override for inner pages; unknown bank → OTHER; rejects junk', () => {
+    expect(parsePassbook(['01/10/69 TRF 1.00 2.00']).bank).toBe('OTHER'); // unknown bank still imports
     expect(parsePassbook(['01/10/69 TRF 1.00 2.00'], 'KBANK').accountNoMasked).toBe('passbook');
     expect(() => parsePassbook(['กสิกรไทย', 'hello'])).toThrow('unsupported_format');
   });

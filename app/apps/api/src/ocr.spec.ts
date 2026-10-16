@@ -55,3 +55,15 @@ describe('pairSlipRows', () => {
     expect(pairSlipRows(stmt, slips)).toEqual([{ slipTxId: 'a', stmtTxId: 's1' }]);
   });
 });
+
+describe('wallet screenshot (real OCR on mock)', () => {
+  it('TrueMoney history PNG → 4 rows, no balance, mode none', async () => {
+    const { parsePassbook, checkBalances } = await import('@fjm/shared');
+    const { ocrPages } = await import('./ocr.js');
+    const s = parsePassbook(await ocrPages([readFileSync(join(__dirname, '../../../mock-data/wallet/truemoney_history_2026-09.png'))], 1.5));
+    expect(s.bank).toBe('TRUEMONEY');
+    expect(s.rows.map((r) => [r.date, r.time, r.direction, r.amount])).toEqual([
+      ['2026-09-16', '12:30', 'out', 8500], ['2026-09-17', '09:05', 'in', 50000], ['2026-09-18', '18:42', 'out', 12900], ['2026-09-19', '20:15', 'in', 25000]]);
+    expect(checkBalances(s).mode).toBe('none');
+  }, 60_000);
+});
