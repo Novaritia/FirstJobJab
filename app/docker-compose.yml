@@ -18,9 +18,16 @@ services:
     environment:
       DATABASE_URL: postgresql://fjm:${POSTGRES_PASSWORD:-fjm}@db:5432/fjm
       NODE_ENV: production
+      OCR_URL: http://ocr:8765
     ports: ["4000:4000"]
     volumes: [uploads:/repo/apps/api/uploads]
-    depends_on: { db: { condition: service_healthy } }
+    depends_on: { db: { condition: service_healthy }, ocr: { condition: service_started } }
+    profiles: [full]
+
+  # PaddleOCR PP-OCRv5 Thai via RapidOCR (docs/ocr.md); internal only, api falls back to tesseract if it's down
+  ocr:
+    build: ./apps/ocr
+    restart: unless-stopped
     profiles: [full]
 
   web:

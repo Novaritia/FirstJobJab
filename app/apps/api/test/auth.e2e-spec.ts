@@ -43,6 +43,18 @@ describe('auth e2e', () => {
     expect(logins.map((l: { success: boolean }) => l.success)).toEqual([true, false, true]);
     expect(logins[0]).toMatchObject({ current: true, location: 'เครือข่ายภายใน' });
 
+    const put = await f.inject({ method: 'PUT', url: '/profile', cookies: { sid: sid.value }, payload: { phone: '0812345678', nationalId: '1103700123458', monthlySalary: 25000 } });
+    expect(put.json()).toMatchObject({ displayName: 'E2E', email, phone: '0812345678', nationalIdMasked: 'x-xxxx-xxxxx-45-8', hasNationalId: true, birthDate: null, monthlySalary: 2500000 });
+    expect(JSON.stringify(put.json())).not.toContain('1103700123458');
+    const badPut = await f.inject({ method: 'PUT', url: '/profile', cookies: { sid: sid.value }, payload: { phone: '12' } });
+    expect(badPut.json()).toEqual({ error: 'invalid_profile', fields: { phone: 'invalid_phone' } });
+    const cleared = (await f.inject({ method: 'PUT', url: '/profile', cookies: { sid: sid.value }, payload: { nationalId: null } })).json();
+    expect(cleared).toMatchObject({ hasNationalId: false, nationalIdMasked: null, phone: '0812345678' });
+    const page = (await f.inject({ method: 'GET', url: '/audit?limit=1&page=2', cookies: { sid: sid.value } })).json();
+    expect(page.entries).toHaveLength(1);
+    expect(page.total).toBeGreaterThan(2);
+    expect((await f.inject({ method: 'GET', url: '/security/logins?limit=2', cookies: { sid: sid.value } })).json()).toMatchObject({ total: 3 });
+
     const del = await f.inject({ method: 'DELETE', url: '/account', cookies: { sid: sid.value }, payload: { password: 'longpassword1' } });
     expect(del.statusCode).toBe(200);
     expect((await f.inject({ method: 'GET', url: '/auth/me', cookies: { sid: sid.value } })).statusCode).toBe(401);

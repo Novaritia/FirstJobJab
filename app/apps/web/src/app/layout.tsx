@@ -1,6 +1,9 @@
 import type { Metadata, Viewport } from "next";
 import { IBM_Plex_Sans_Thai } from "next/font/google";
 import "./globals.css";
+import { TopLoader } from "@/components/TopLoader";
+import { Toaster } from "@/components/shadcn/sonner";
+import { TooltipProvider } from "@/components/shadcn/tooltip";
 
 const plex = IBM_Plex_Sans_Thai({
   variable: "--font-plex",
@@ -10,7 +13,7 @@ const plex = IBM_Plex_Sans_Thai({
 
 const CONTRACT = `<!--
 THESIS: Statement rows you can trust become a plan; refuses the soft pastel finance-app look (glass, blobs, pills, puffy cards).
-OWN-WORLD: Brief-pinned Stripe-dashboard grammar: neutral canvas, white bordered panels, 1px hairlines, 4-6px corners, labelled sections, right-aligned tabular numbers; blue only for primary action, active nav, links, focus, key figures. One family: IBM Plex Sans Thai.
+OWN-WORLD: Modern minimal white + blue on shadcn/ui primitives: light cool-blue canvas, white bordered panels, 1px hairlines, 8-10px corners, labelled sections, right-aligned tabular numbers; blue only for primary action, active nav, links, focus, key figures. One family: IBM Plex Sans Thai.
 STORY: See every statement row balance-checked, read where salary went, act: upload this month (streak +1).
 FIRST VIEWPORT: Landing: headline + primary button left, a bordered statement-check table + plan summary right. App: page header with primary action right; overview stat strip first.
 FORM: brief-pinned (beats roll); seed eceb3424.
@@ -26,16 +29,18 @@ export const metadata: Metadata = {
 export const viewport: Viewport = {
   themeColor: [
     { media: "(prefers-color-scheme: light)", color: "#FFFFFF" },
-    { media: "(prefers-color-scheme: dark)", color: "#111827" },
+    { media: "(prefers-color-scheme: dark)", color: "#0B1220" },
   ],
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
-    <html lang="th" className={`${plex.variable} h-full antialiased`}>
+    <html lang="th" data-scroll-behavior="smooth" className={`${plex.variable} h-full antialiased`}>
       <body className="min-h-full flex flex-col">
         <div hidden dangerouslySetInnerHTML={{ __html: CONTRACT }} />
-        {children}
+        <TopLoader />
+        <TooltipProvider delayDuration={200}>{children}</TooltipProvider>
+        <Toaster position="top-center" richColors closeButton />
       </body>
     </html>
   );

@@ -12,10 +12,12 @@ import { HttpErrorFilter } from './http-error.filter.js';
 import { ChatController } from './chat.controller.js';
 import { ChatService } from './chat.js';
 import { AccountController, SecurityController } from './security.controller.js';
+import { ProfileService } from './profile.service.js';
 import { SlipsController } from './slips.controller.js';
+import { ExportController } from './export.controller.js';
 
 @Module({
-  controllers: [AuthController, ProfileController, UploadsController, TransactionsController, InsightsController, ChatController, SlipsController, SecurityController, AccountController],
-  providers: [PrismaService, AuditService, StatsService, AuthGuard, ChatService, { provide: APP_FILTER, useClass: HttpErrorFilter }],
+  controllers: [AuthController, ProfileController, UploadsController, TransactionsController, InsightsController, ChatController, SlipsController, SecurityController, AccountController, ExportController],
+  providers: [PrismaService, AuditService, StatsService, AuthGuard, ChatService, ProfileService, { provide: APP_FILTER, useClass: HttpErrorFilter }],
 })
 export class AppModule {}

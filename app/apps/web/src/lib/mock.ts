@@ -9,6 +9,7 @@ const err = (status: number, error: string) => ok({ error }, status);
 
 const MONTHS = ["2026-05", "2026-06", "2026-07", "2026-08", "2026-09"];
 let loggedIn = true;
+const profile: Record<string, unknown> = { displayName: "มิ้นท์", fullName: null, phone: null, birthDate: null, monthlySalary: null };
 const user = { id: "u1", email: "demo@firstjobjab.app", displayName: "มิ้นท์", hasPii: false, createdAt: "2026-10-16T08:00:00Z" };
 const consents: Consent[] = [
   { purpose: "planning", granted: true, version: "1", at: "2026-10-16T08:00:00Z" },
@@ -62,7 +63,7 @@ function summary(months: number) {
     .sort((a, b) => b.amount - a.amount).slice(0, 5);
   return {
     months: ms, topSpend,
-    text: "3 เดือนที่ผ่านมา เงินเดือนเข้าเฉลี่ย ฿28,000 ใช้ไปประมาณ ฿16,500 เหลือเก็บราว ฿11,500 ต่อเดือน 👍 ค่าใช้จ่ายก้อนใหญ่สุดคือค่าห้อง รองลงมาคือส่งให้ครอบครัวและผ่อนบัตร ถ้าลด Grab Food ลงครึ่งหนึ่งจะเก็บเพิ่มได้อีกราว ฿1,000/เดือน",
+    text: "3 เดือนที่ผ่านมา เงินเดือนเข้าเฉลี่ย ฿28,000 ใช้ไปประมาณ ฿16,500 เหลือเก็บราว ฿11,500 ต่อเดือน ค่าใช้จ่ายก้อนใหญ่สุดคือค่าห้อง รองลงมาคือส่งให้ครอบครัวและผ่อนบัตร ถ้าลด Grab Food ลงครึ่งหนึ่งจะเก็บเพิ่มได้อีกราว ฿1,000/เดือน",
   };
 }
 
@@ -153,6 +154,10 @@ export async function mockFetch(path: string, init: RequestInit): Promise<Respon
   if (!loggedIn) return err(401, "unauthorized");
   if (p === "/auth/me") return ok({ user });
 
+  if (p === "/profile") {
+    if (method === "PUT") Object.assign(profile, body, body.monthlySalary != null && { monthlySalary: body.monthlySalary * 100 });
+    return ok({ ...profile, email: user.email, nationalIdMasked: null, hasNationalId: false });
+  }
   if (p === "/profile/pii") { user.hasPii = true; return ok({ ok: true }); }
   if (p === "/profile/consents" && method === "GET") return ok({ consents });
   if (p === "/profile/consents") {
@@ -248,6 +253,6 @@ export async function mockFetch(path: string, init: RequestInit): Promise<Respon
   if (p === "/streak") return ok(streak());
   if (p === "/voice/weekly") return err(503, "voice_unavailable");
   if (p === "/voice/weekly/text") return ok({ text: "สัปดาห์นี้ใช้ไป ฿3,200 จากงบ ฿4,000 เก่งมาก! ค่าอาหารลดลงจากสัปดาห์ก่อน 15%" });
-  if (p === "/audit") return ok({ entries: audit });
+  if (p === "/audit") return ok({ entries: audit, total: audit.length });
   return err(404, `mock: no route ${method} ${p}`);
 }

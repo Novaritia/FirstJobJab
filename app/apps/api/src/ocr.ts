@@ -29,8 +29,28 @@ const getWorker = () =>
     return w;
   }).catch((e: unknown) => { worker = undefined; throw e; }));
 
-/** OCR text lines of one image (PNG/JPEG) + mean confidence 0..1. scale > 1 upsamples phone screenshots (measured: fixes Thai month abbreviations). */
+/** PaddleOCR PP-OCRv5 Thai sidecar (apps/ocr, docs/ocr.md): far better Thai than tesseract; returns null if unset/down. */
+async function paddleOcr(img: Buffer): Promise<{ lines: string[]; confidence: number } | null> {
+  if (!process.env.OCR_URL) return null;
+  try {
+    const fd = new FormData();
+    fd.append('file', new Blob([new Uint8Array(img)]), 'img');
+    const r = await fetch(`${process.env.OCR_URL}/ocr`, { method: 'POST', body: fd, signal: AbortSignal.timeout(30000) });
+    if (!r.ok) throw new Error(`ocr ${r.status}`);
+    const j = (await r.json()) as { lines: string[]; boxes: { score: number }[] };
+    const confidence = j.boxes.length ? j.boxes.reduce((a, b) => a + b.score, 0) / j.boxes.length : 0;
+    return { lines: j.lines.map(cleanThai).filter(Boolean), confidence };
+  } catch (e) {
+    log.warn(`paddle ocr failed, falling back to tesseract: ${(e as Error).message}`);
+    return null;
+  }
+}
+
+/** OCR text lines of one image (PNG/JPEG) + mean confidence 0..1. Paddle sidecar first, tesseract fallback.
+ *  scale > 1 upsamples phone screenshots for tesseract (measured: fixes Thai month abbreviations); Paddle ignores it. */
 export async function ocrImage(img: Buffer, scale = 1): Promise<{ lines: string[]; confidence: number }> {
+  const p = await paddleOcr(img);
+  if (p) return p;
   if (scale !== 1) {
     const im = await loadImage(img);
     const cv = createCanvas(Math.round(im.width * scale), Math.round(im.height * scale));
@@ -137,50 +157,13 @@ export function parseSlipQr(payload: string): { qrRef: string; bank?: string } |
   return { qrRef: sub['02'], bank: BANK_CODES[sub['01'] ?? ''] };
 }
 
-/** Optional: Gemini vision fallback when tesseract misses amount/date. Opt-in (SLIP_GEMINI=1) because it sends the slip image (names) to Google. */
-async function geminiSlip(img: Buffer, mime: string): Promise<SlipFields | null> {
-  if (process.env.SLIP_GEMINI !== '1' || !process.env.GEMINI_API_KEY) return null;
-  try {
-    const model = process.env.GEMINI_MODEL || 'gemini-3.5-flash-lite';
-    const r = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent`, {
-      method: 'POST',
-      headers: { 'content-type': 'application/json', 'x-goog-api-key': process.env.GEMINI_API_KEY },
-      body: JSON.stringify({
-        contents: [{ parts: [
-          { inline_data: { mime_type: mime, data: img.toString('base64') } },
-          { text: 'This is a Thai bank transfer slip. Reply JSON only: {"amountBaht":number,"date":"YYYY-MM-DD" (convert Buddhist year to CE),"time":"HH:mm","fromName":string,"toName":string,"bank":"KBANK|SCB|BBL|KTB|BAY|TTB|GSB|other","ref":string}' },
-        ] }],
-        generationConfig: { responseMimeType: 'application/json' },
-      }),
-      signal: AbortSignal.timeout(15000),
-    });
-    if (!r.ok) throw new Error(`gemini ${r.status}`);
-    const j = (await r.json()) as { candidates?: { content?: { parts?: { text?: string }[] } }[] };
-    const o = JSON.parse(j.candidates?.[0]?.content?.parts?.[0]?.text ?? '{}') as Record<string, unknown>;
-    const str = (v: unknown, re: RegExp) => (typeof v === 'string' && re.test(v) ? v : undefined);
-    return {
-      amount: typeof o.amountBaht === 'number' && o.amountBaht > 0 ? Math.round(o.amountBaht * 100) : undefined,
-      date: str(o.date, /^\d{4}-\d{2}-\d{2}$/), time: str(o.time, /^\d{2}:\d{2}$/),
-      fromName: str(o.fromName, /\S/)?.slice(0, 100), toName: str(o.toName, /\S/)?.slice(0, 100),
-      bank: str(o.bank, /^[A-Z]{2,5}$/), ref: str(o.ref, /^[A-Za-z0-9]{6,40}$/),
-    };
-  } catch (e) {
-    log.warn(`gemini slip failed: ${(e as Error).message}`);
-    return null;
-  }
-}
-
 export interface SlipRead extends SlipFields { qrRef?: string; confidence: number }
 
-/** Read one slip image: QR (exact ref) + tesseract tha+eng + regex; Gemini only if amount/date still missing and opted in. */
-export async function readSlip(img: Buffer, mime: string): Promise<SlipRead> {
+/** Read one slip image: QR (exact ref) + local OCR (Paddle, else tesseract) + regex. Slip images never leave the server. */
+export async function readSlip(img: Buffer): Promise<SlipRead> {
   const [qr, ocr] = await Promise.all([decodeQr(img).catch(() => null), ocrImage(img, 1.5)]);
-  let f = parseSlipText(ocr.lines.join('\n'));
+  const f = parseSlipText(ocr.lines.join('\n'));
   let confidence = ocr.confidence;
-  if (!f.amount || !f.date) {
-    const g = await geminiSlip(img, mime);
-    if (g) { f = { ...f, ...Object.fromEntries(Object.entries(g).filter(([, v]) => v !== undefined)) }; confidence = Math.max(confidence, 0.85); }
-  }
   const q = qr ? parseSlipQr(qr) : null;
   if (!f.amount || !f.date) confidence = Math.min(confidence, 0.3);
   if (!f.time) confidence = Math.min(confidence, 0.8);

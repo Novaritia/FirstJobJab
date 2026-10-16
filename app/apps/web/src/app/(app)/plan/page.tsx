@@ -6,8 +6,9 @@ import { baht } from "@/lib/format";
 import { splitSalary } from "@/lib/plan";
 import { ButtonLink, Card, Loading, PageTitle, useApi } from "@/components/ui";
 import { RaiseCalc } from "@/components/RaiseCalc";
-import { GrowthChart } from "@/components/charts";
 import { Money } from "@/components/motion";
+import dynamic from "next/dynamic";
+const GrowthChart = dynamic(() => import("@/components/charts").then((m) => m.GrowthChart), { ssr: false, loading: () => <span aria-hidden className="skeleton block h-72 rounded-md" /> });
 
 export default function Plan() {
   const summary = useApi<Summary>("/insights/summary?months=3");

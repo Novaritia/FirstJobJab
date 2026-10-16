@@ -1,5 +1,6 @@
 "use client";
 import { useState } from "react";
+import { CircleCheck } from "lucide-react";
 import { estimateTax } from "@fjm/shared";
 import { baht, toSatang } from "@/lib/format";
 import { ssYear } from "@/lib/plan";
@@ -67,8 +68,8 @@ export function TaxCalc({ year, monthlySalary }: { year: number; monthlySalary: 
             </tfoot>
           </table>
           {saved > 0 && (
-            <p className="mt-3 rounded border border-success/30 bg-success-bg px-3 py-2 text-sm text-success">
-              ✅ ลดหย่อนเพิ่มอีก <span className="num font-semibold">{baht(extra, 0)}</span> (เช่น ThaiESG) จะประหยัดภาษี <span className="num font-semibold">{baht(saved, 0)}</span>
+            <p className="mt-3 flex gap-1.5 rounded border border-success/30 bg-success-bg px-3 py-2 text-sm text-success">
+              <CircleCheck aria-hidden size={16} className="mt-0.5 shrink-0" /><span>ลดหย่อนเพิ่มอีก <span className="num font-semibold">{baht(extra, 0)}</span> (เช่น ThaiESG) จะประหยัดภาษี <span className="num font-semibold">{baht(saved, 0)}</span></span>
             </p>
           )}
         </div>

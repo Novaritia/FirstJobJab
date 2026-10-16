@@ -6,7 +6,8 @@ import { pdfItems } from './pdf-text';
 
 const DIR = resolve(__dirname, '../../../mock-data');
 const PII = { birthDate: '1999-03-14', nationalId: '1103700123458' };
-const files = existsSync(DIR) ? readdirSync(DIR).filter((f) => f.endsWith('.pdf')) : [];
+// SCANNED_* has no text layer or password; it goes through the api OCR path instead
+const files = existsSync(DIR) ? readdirSync(DIR).filter((f) => f.endsWith('.pdf') && !f.startsWith('SCANNED')) : [];
 
 describe('mock statements (run `pnpm --filter @fjm/shared mock` first)', () => {
   it('mock PDFs exist', () => expect(files.length).toBeGreaterThanOrEqual(13));

@@ -1,6 +1,7 @@
 "use client";
 import { useState } from "react";
-import { FileUp } from "lucide-react";
+import { CircleCheck, FileUp } from "lucide-react";
+import { Flame } from "@/components/motion";
 import { api, errorText, json } from "@/lib/api";
 import { CONSENTS, PiiForm } from "@/components/PiiForm";
 import { Badge, Button, ButtonLink, Card, ErrorNote, PageTitle } from "@/components/ui";
@@ -34,8 +35,8 @@ export default function Onboarding() {
       <ol className="mb-6 flex gap-2" aria-label="ขั้นตอน">
         {STEPS.map((s, i) => (
           <li key={s} aria-current={i === step ? "step" : undefined}
-            className={`flex-1 border-b-2 px-1 pb-2 text-sm font-semibold ${i === step ? "border-primary text-primary" : i < step ? "border-success text-success" : "border-line text-muted"}`}>
-            {i < step ? "✅ " : `${i + 1}. `}{s}
+            className={`flex flex-1 items-center gap-1 border-b-2 px-1 pb-2 text-sm font-semibold ${i === step ? "border-primary text-primary" : i < step ? "border-success text-success" : "border-line text-muted"}`}>
+            {i < step ? <CircleCheck aria-hidden size={14} className="shrink-0" /> : `${i + 1}. `}{s}
           </li>
         ))}
       </ol>
@@ -47,7 +48,7 @@ export default function Onboarding() {
             <ul className="flex flex-col divide-y divide-line rounded border border-line">
               {CONSENTS.filter((c) => c.required).map((c) => (
                 <li key={c.purpose} className="flex items-center justify-between gap-3 px-4 py-2.5 text-sm">
-                  <span>{c.title}</span><Badge kind="ok">✅ ยอมรับแล้ว</Badge>
+                  <span>{c.title}</span><Badge kind="ok"><CircleCheck aria-hidden size={14} /> ยอมรับแล้ว</Badge>
                 </li>
               ))}
             </ul>
@@ -82,7 +83,7 @@ export default function Onboarding() {
           <FileUp aria-hidden size={48} className="mx-auto text-primary" />
           <h2 className="mt-3 text-xl font-bold">อัปโหลด statement ย้อนหลัง 3–6 เดือน</h2>
           <p className="mx-auto mt-2 max-w-md text-muted">
-            ขอ e-statement จากแอปธนาคาร (KBank / Bangkok Bank) แล้วอัปโหลดทีเดียวหลายไฟล์ได้ ยิ่งครบหลายเดือน streak ยิ่งเริ่มสูง 🔥
+            ขอ e-statement จากแอปธนาคาร (KBank / Bangkok Bank) แล้วอัปโหลดทีเดียวหลายไฟล์ได้ ยิ่งครบหลายเดือน streak ยิ่งเริ่มสูง <Flame />
           </p>
           <div className="mt-6 flex flex-wrap justify-center gap-3">
             <ButtonLink href="/upload">อัปโหลดเลย</ButtonLink>

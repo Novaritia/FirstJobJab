@@ -15,12 +15,15 @@ Errors: `{ "error": "message" }` with 4xx/5xx.
 `user = {id, email, displayName, hasPii: boolean, createdAt}` (+ `needsReconsent: boolean` on /auth/me — true when accepted terms/privacy version < current → show accept screen, then POST /profile/reconsent)
 
 ## Profile / PII / consent
+| GET | /profile | — | `{displayName, email, fullName, phone, birthDate, nationalIdMasked: 'x-xxxx-xxxxx-45-8'\|null, hasNationalId, monthlySalary (satang)\|null}` — full ID never returned |
+| PUT | /profile | any subset of `{displayName, fullName, phone, birthDate: 'YYYY-MM-DD', nationalId, monthlySalary (baht number)}`; `null`/`''` clears an optional field; email is read-only | same as GET. Phone normalised to `0XXXXXXXXX` (06/08/09 mobiles, +66 ok); nationalId mod-11 checksum. 400 `{error:'invalid_profile', fields:{phone:'invalid_phone', nationalId:'invalid_national_id', displayName:'required', birthDate:'invalid_date', monthlySalary:'invalid_salary', fullName:'too_short'\|'too_long'}}`. Audit `profile_change` with changed field names only. No nationalId ⇒ statements export only (no prefilled tax pack). Server helper: `ProfileService.decrypted(userId)` (src/profile.service.ts) |
 | PUT | /profile/pii | `{birthDate: 'YYYY-MM-DD', nationalId: string}` | `{ok}` (stored encrypted) |
 | GET | /profile/consents | — | `{consents: {purpose, granted, version, at}[]}` |
 | PUT | /profile/consents | `{purpose: 'planning'|'loan_summary'|'improve', granted: boolean}` | `{ok}` |
 
 ## Uploads → review → confirm
 | POST | /uploads | multipart `file` (PDF) + optional `password` | `{uploadId, bank, period:{start,end}, accountNoMasked, rows: ReviewRow[], check: BalanceCheckResult}` |
+| POST | /uploads/passbook | multipart repeated `images` (PNG/JPEG passbook page photos, in page order, ≤15 × 10 MB) + optional `bank` (KBANK or BBL, for pages without a logo) | same as POST /uploads + `pages`; `ocr: true`. Rows get `channel: "Passbook"`, no time. Direction from balance delta; first row needs a ยอดยกมา/B/F line to be verifiable. 415 not_an_image, 422 unsupported_format, 409 already_imported (sha256 over page hashes). Pages stored as one AES-GCM blob like PDFs. Then the same PATCH rows / confirm flow; confirm skips rows already imported by date+amount+balance |
 | PATCH | /uploads/:id/rows/:index | `{amount?, direction?, date?, balance?}` (only failing rows) | `{rows, check}` (re-checked) |
 | POST | /uploads/:id/confirm | — | `{imported: number, streak}` — 409 if check still fails |
 | GET | /uploads | — | `{uploads: {id, bank, periodStart, periodEnd, status, rowCount, createdAt}[]}` |
@@ -29,13 +32,15 @@ If PDF is locked and no password given, server tries stored PII (birth date / na
 `ReviewRow = ParsedRow & {index, ok: boolean, category: Category}`
 
 ## Transactions
-| GET | /transactions?from&to&accountId | — | `{transactions: Tx[]}` |
+| GET | /transactions?from&to&accountId&q&direction&category&source&minAmount&maxAmount&hidden&limit&offset\|page&sort | — | `{transactions: Tx[], total, accounts: {id, bank, accountNoMasked, accountName}[]}` — see filters below |
 | PATCH | /transactions/:id | `{category?, note?, hidden?}` | `{transaction}` (edit logged) |
 | POST | /transactions | `{date, amount, direction, description, category}` | manual row (source='manual') |
 | GET | /transactions/:id/edits | — | `{edits: {field, oldValue, newValue, at}[]}` |
 | GET | /transactions/export.csv | — | CSV download |
 
 `Tx = {id, accountId, date, time?, description, amount, direction, balance?, category, note?, source, verified, hidden, edited: boolean}`
+
+GET /transactions filters (all optional): `q` (≤100 chars, case-insensitive contains on description/note, plus categories whose Thai name or key contains it), `direction` in\|out, `category`, `source` statement\|slip\|manual, `minAmount`/`maxAmount` (satang, inclusive), `hidden` include (default, = old behaviour)\|exclude\|only, `limit` 1–500 (default **50** — callers that need everything must page), `offset` or `page` (1-based; wins over offset), `sort` date_desc (default)\|date_asc\|amount_desc\|amount_asc. `total` = count matching the filters (ignores limit/offset). Bad values → 400.
 
 ## Insights
 | GET | /insights/summary?months=3 | — | `{months: MonthSummary[], topSpend: {category, amount}[], text: string}` (text = Thai plain-language summary) |
@@ -51,7 +56,7 @@ If PDF is locked and no password given, server tries stored PII (birth date / na
 | GET | /voice/weekly/text | — | `{text}` |
 
 ## Audit
-| GET | /audit | — | `{entries: {action, target, at}[]}` (own entries only) |
+| GET | /audit?limit&page (or &offset) | — | `{entries: {action, target, at}[], total}` (own entries only, newest first; default limit 200, max 200) |
 
 ## Chat (ask about my account)
 | Method | Path | Body | Returns |
@@ -65,7 +70,7 @@ LLM: Gemini → OpenAI → rule-based Thai fallback (no key). Tools are scoped t
 ## Security
 | Method | Path | Body | Returns |
 |---|---|---|---|
-| GET | /security/logins | — | `{logins: {at, success, ip, device, location, current}[]}` (last 100; kept 90 days; fails recorded only for existing emails) |
+| GET | /security/logins?limit&page (or &offset) | — | `{logins: {at, success, ip, device, location, current}[], total}` (newest first; default/max limit 100; kept 90 days; fails recorded only for existing emails) |
 | GET | /security/sessions | — | `{sessions: {id, createdAt, lastSeenAt, device, location, current}[]}` |
 | DELETE | /security/sessions/:id | — | `{ok}` |
 | POST | /security/sessions/revoke-others | — | `{ok, revoked: number}` |

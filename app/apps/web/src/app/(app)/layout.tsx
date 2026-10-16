@@ -8,6 +8,7 @@ import { ApiError, MOCK, api, type User } from "@/lib/api";
 import { Loading, cx } from "@/components/ui";
 import { UserCtx } from "@/components/user";
 import { Initial } from "@/components/session";
+import { StreakBadge } from "@/components/StreakTrack";
 
 const GROUPS = [
   { label: "ภาพรวม", items: [{ href: "/dashboard", label: "หน้าหลัก", icon: LayoutDashboard }, { href: "/assistant", label: "ผู้ช่วย", icon: MessageCircle }] },
@@ -42,9 +43,10 @@ export default function AppLayout({ children }: LayoutProps<"/">) {
       </a>
 
       {/* sidebar: icon rail on tablet (expandable), full on desktop */}
-      <nav aria-label="เมนูหลัก" className={cx("sticky top-0 hidden h-dvh shrink-0 flex-col border-r border-line bg-surface md:flex", open ? "w-60" : "w-16 lg:w-60")}>
+      <nav aria-label="เมนูหลัก" className={cx("sticky top-0 hidden h-dvh shrink-0 flex-col border-r border-line bg-shell md:flex", open ? "w-60" : "w-16 lg:w-60")}>
         <div className="flex h-14 items-center justify-between border-b border-line px-4">
           <Link href="/dashboard" className={cx("font-bold text-text", wide)}>FirstJobJab</Link>
+          <StreakBadge className={open ? "" : "max-lg:hidden"} />
           <button type="button" onClick={() => setOpen(!open)} aria-expanded={open} aria-label={open ? "ย่อเมนู" : "ขยายเมนู"}
             className="grid size-9 place-items-center rounded text-muted hover:bg-subtle lg:hidden">
             <PanelLeft aria-hidden size={18} />
@@ -83,6 +85,7 @@ export default function AppLayout({ children }: LayoutProps<"/">) {
         <header className="sticky top-0 z-30 flex h-14 items-center justify-between border-b border-line bg-surface px-4 md:hidden">
           <Link href="/dashboard" className="font-bold">FirstJobJab</Link>
           <div className="flex items-center gap-1">
+            <StreakBadge />
             <Link href="/assistant" className="flex min-h-11 items-center gap-1.5 px-2 text-sm font-medium text-primary"><MessageCircle aria-hidden size={16} /> ถามผู้ช่วย</Link>
             {user && <Link href="/settings" aria-label={`บัญชี ${user.displayName}`} className="grid size-11 place-items-center"><Initial name={user.displayName} /></Link>}
           </div>

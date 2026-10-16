@@ -1,111 +1,406 @@
 @import "tailwindcss";
+@import "tw-animate-css";
 
-/* Stripe-like: neutral canvas, white panels, 1px hairlines, blue only for action/state/key data. */
+/*
+ * Modern minimal, white + blue. shadcn/ui tokens are the source; the app's older names
+ * (bg, surface, subtle, line, text, muted, primary-soft, ...) are aliases of them.
+ * NOTE: as a Tailwind colour, "muted" is the muted TEXT colour (text-muted, as the app always used).
+ * For a muted fill use bg-secondary or bg-subtle, not bg-muted.
+ */
 :root {
-  --bg: #F6F8FA;
-  --surface: #FFFFFF;
-  --subtle: #F3F5F8;
-  --line: #E3E8EE;
-  --line-strong: #CBD3DD;
-  --primary: #1D4ED8;
-  --primary-hover: #1E40AF;
-  --primary-soft: #EAF0FD;
-  --on-primary: #FFFFFF;
-  --accent: #0EA5E9;
-  --text: #1A2433;
-  --text-muted: #556172;
+  --radius: 0.5rem; /* plain `rounded` + controls 8px; cards rounded-lg 10px; dialogs rounded-xl 14px */
+
+  /* shadcn core */
+  --background: #F5F8FC;          /* very light cool-blue canvas */
+  --foreground: #0F172A;
+  --card: #FFFFFF;
+  --card-foreground: #0F172A;
+  --popover: #FFFFFF;
+  --popover-foreground: #0F172A;
+  --primary: #2563EB;             /* white text 5.2:1 */
+  --primary-foreground: #FFFFFF;
+  --secondary: #F1F5F9;
+  --secondary-foreground: #0F172A;
+  --muted: #F1F5F9;               /* raw var only: a fill */
+  --muted-foreground: #556275;    /* 5.9:1 on white, 5.5:1 on canvas */
+  --accent: #EFF5FF;              /* hover / selected fill */
+  --accent-foreground: #1D4ED8;
+  --destructive: #DC2626;
+  --border: #E3E9F1;
+  --input: #CBD5E1;
+  --ring: #2563EB;
+
+  /* categorical set: blue-led, CVD-friendly order (blue, amber, teal, violet, rose, slate) */
+  --chart-1: #2563EB;
+  --chart-2: #D97706;
+  --chart-3: #0D9488;
+  --chart-4: #7C3AED;
+  --chart-5: #E11D48;
+  --chart-6: #64748B;
+
+  --sidebar: #FFFFFF;
+  --sidebar-foreground: #0F172A;
+  --sidebar-primary: #2563EB;
+  --sidebar-primary-foreground: #FFFFFF;
+  --sidebar-accent: #EFF5FF;
+  --sidebar-accent-foreground: #1D4ED8;
+  --sidebar-border: #E3E9F1;
+  --sidebar-ring: #2563EB;
+
+  /* app aliases (old names keep working) */
+  --bg: var(--background);
+  --surface: var(--card);
+  --subtle: #F2F5FA;
+  --shell: var(--sidebar);
+  --line: var(--border);
+  --line-strong: #CBD5E1;
+  --primary-hover: #1D4ED8;
+  --primary-soft: #EFF5FF;
+  --on-primary: var(--primary-foreground);
+  --text: var(--foreground);
+  --text-muted: var(--muted-foreground);
+  --cat-1: var(--chart-1);
+  --cat-2: var(--chart-2);
+  --cat-3: var(--chart-3);
+  --cat-4: var(--chart-4);
+  --cat-5: var(--chart-5);
+  --cat-6: var(--chart-6);
+
+  /* status: text colour >= 4.5:1 on white and on its own -bg */
   --success: #15803D;
-  --warning: #A34A06;
+  --warning: #B45309;
+  --streak: #EA580C;
   --danger: #B91C1C;
-  --success-bg: #ECF8F0;
-  --warning-bg: #FFF6E5;
-  --danger-bg: #FDEEEE;
-  --pop-shadow: 0 12px 32px rgb(16 24 40 / 0.14), 0 2px 6px rgb(16 24 40 / 0.08);
+  --success-bg: #ECFDF3;
+  --warning-bg: #FFF7E8;
+  --danger-bg: #FEF1F1;
+
+  --pop-shadow: 0 12px 32px rgb(15 23 42 / 0.12), 0 2px 6px rgb(15 23 42 / 0.06);
+  --card-shadow: 0 1px 2px rgb(15 23 42 / 0.04), 0 1px 3px rgb(15 23 42 / 0.03);
+
+  /* tonal scales */
+  --blue-50: #EFF5FF;
+  --blue-100: #DBE8FE;
+  --blue-200: #BFD5FE;
+  --blue-300: #93B8FD;
+  --blue-400: #6094FA;
+  --blue-500: #3B76F6;
+  --blue-600: #2563EB;
+  --blue-700: #1D4ED8;
+  --blue-800: #1E40AF;
+  --blue-900: #1E3A8A;
+  --ink-50: #F8FAFC;
+  --ink-100: #F1F5F9;
+  --ink-200: #E2E8F0;
+  --ink-300: #CBD5E1;
+  --ink-400: #94A3B8;
+  --ink-500: #64748B;
+  --ink-600: #475569;
+  --ink-700: #334155;
+  --ink-800: #1E293B;
+  --ink-900: #0F172A;
   color-scheme: light;
 }
+
+/* Dark: follows the OS (unless <html class="light">), or force with <html class="dark">. Keep both blocks in sync. */
 @media (prefers-color-scheme: dark) {
-  :root {
-    --bg: #0B1120;
-    --surface: #111827;
-    --subtle: #172033;
-    --line: #253046;
-    --line-strong: #34425E;
-    --primary: #7AA2F7;
-    --primary-hover: #9AB8FA;
-    --primary-soft: #1B2A4A;
-    --on-primary: #0B1120;
-    --accent: #38BDF8;
-    --text: #E6EBF2;
-    --text-muted: #9AA7BA;
+  :root:not(.light) {
+    --background: #0B1220;
+    --foreground: #E6ECF5;
+    --card: #111A2E;
+    --card-foreground: #E6ECF5;
+    --popover: #131D33;
+    --popover-foreground: #E6ECF5;
+    --primary: #6EA0FF;
+    --primary-foreground: #0B1220;
+    --secondary: #18233B;
+    --secondary-foreground: #E6ECF5;
+    --muted: #18233B;
+    --muted-foreground: #9AA8BD;
+    --accent: #172A4D;
+    --accent-foreground: #BFD5FE;
+    --destructive: #F87171;
+    --border: #22304A;
+    --input: #33445F;
+    --ring: #6EA0FF;
+    --chart-1: #6EA0FF;
+    --chart-2: #FBBF24;
+    --chart-3: #2DD4BF;
+    --chart-4: #A78BFA;
+    --chart-5: #FB7185;
+    --chart-6: #94A3B8;
+    --sidebar: #0E1628;
+    --sidebar-foreground: #E6ECF5;
+    --sidebar-primary: #6EA0FF;
+    --sidebar-primary-foreground: #0B1220;
+    --sidebar-accent: #172A4D;
+    --sidebar-accent-foreground: #BFD5FE;
+    --sidebar-border: #22304A;
+    --sidebar-ring: #6EA0FF;
+    --subtle: #16213A;
+    --line-strong: #33445F;
+    --primary-hover: #8DB4FF;
+    --primary-soft: #172A4D;
     --success: #4ADE80;
     --warning: #FBBF24;
+    --streak: #FB923C;
     --danger: #F87171;
-    --success-bg: #11291C;
+    --success-bg: #10291C;
     --warning-bg: #2E230C;
     --danger-bg: #331616;
-    --pop-shadow: 0 12px 32px rgb(0 0 0 / 0.5);
+    --pop-shadow: 0 12px 32px rgb(0 0 0 / 0.5), 0 0 0 1px rgb(255 255 255 / 0.04);
+    --card-shadow: none;
+    --blue-50: #111C33;
+    --blue-100: #172A4D;
+    --blue-200: #1E3A6B;
+    --blue-300: #2A4F94;
+    --blue-400: #3B6BC8;
+    --blue-500: #5585E8;
+    --blue-600: #6EA0FF;
+    --blue-700: #8DB4FF;
+    --blue-800: #BFD5FE;
+    --blue-900: #DBE8FE;
+    --ink-50: #0B1220;
+    --ink-100: #111A2E;
+    --ink-200: #22304A;
+    --ink-300: #33445F;
+    --ink-400: #5B6B82;
+    --ink-500: #7D8BA1;
+    --ink-600: #9AA8BD;
+    --ink-700: #C1CBD9;
+    --ink-800: #D9E0EA;
+    --ink-900: #E6ECF5;
     color-scheme: dark;
   }
 }
+.dark {
+  --background: #0B1220;
+  --foreground: #E6ECF5;
+  --card: #111A2E;
+  --card-foreground: #E6ECF5;
+  --popover: #131D33;
+  --popover-foreground: #E6ECF5;
+  --primary: #6EA0FF;
+  --primary-foreground: #0B1220;
+  --secondary: #18233B;
+  --secondary-foreground: #E6ECF5;
+  --muted: #18233B;
+  --muted-foreground: #9AA8BD;
+  --accent: #172A4D;
+  --accent-foreground: #BFD5FE;
+  --destructive: #F87171;
+  --border: #22304A;
+  --input: #33445F;
+  --ring: #6EA0FF;
+  --chart-1: #6EA0FF;
+  --chart-2: #FBBF24;
+  --chart-3: #2DD4BF;
+  --chart-4: #A78BFA;
+  --chart-5: #FB7185;
+  --chart-6: #94A3B8;
+  --sidebar: #0E1628;
+  --sidebar-foreground: #E6ECF5;
+  --sidebar-primary: #6EA0FF;
+  --sidebar-primary-foreground: #0B1220;
+  --sidebar-accent: #172A4D;
+  --sidebar-accent-foreground: #BFD5FE;
+  --sidebar-border: #22304A;
+  --sidebar-ring: #6EA0FF;
+  --subtle: #16213A;
+  --line-strong: #33445F;
+  --primary-hover: #8DB4FF;
+  --primary-soft: #172A4D;
+  --success: #4ADE80;
+  --warning: #FBBF24;
+  --streak: #FB923C;
+  --danger: #F87171;
+  --success-bg: #10291C;
+  --warning-bg: #2E230C;
+  --danger-bg: #331616;
+  --pop-shadow: 0 12px 32px rgb(0 0 0 / 0.5), 0 0 0 1px rgb(255 255 255 / 0.04);
+  --card-shadow: none;
+  --blue-50: #111C33;
+  --blue-100: #172A4D;
+  --blue-200: #1E3A6B;
+  --blue-300: #2A4F94;
+  --blue-400: #3B6BC8;
+  --blue-500: #5585E8;
+  --blue-600: #6EA0FF;
+  --blue-700: #8DB4FF;
+  --blue-800: #BFD5FE;
+  --blue-900: #DBE8FE;
+  --ink-50: #0B1220;
+  --ink-100: #111A2E;
+  --ink-200: #22304A;
+  --ink-300: #33445F;
+  --ink-400: #5B6B82;
+  --ink-500: #7D8BA1;
+  --ink-600: #9AA8BD;
+  --ink-700: #C1CBD9;
+  --ink-800: #D9E0EA;
+  --ink-900: #E6ECF5;
+  color-scheme: dark;
+}
 
 @theme inline {
+  /* shadcn */
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted-foreground); /* text-muted = muted text (app convention) */
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
+  --color-chart-6: var(--chart-6);
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-ring: var(--sidebar-ring);
+
+  --radius-sm: 6px;
+  --radius-md: 8px;
+  --radius-lg: 10px;
+  --radius-xl: 14px;
+
+  /* app names */
   --color-bg: var(--bg);
   --color-surface: var(--surface);
   --color-subtle: var(--subtle);
+  --color-shell: var(--shell);
   --color-line: var(--line);
   --color-line-strong: var(--line-strong);
-  --color-primary: var(--primary);
   --color-primary-hover: var(--primary-hover);
   --color-primary-soft: var(--primary-soft);
   --color-on-primary: var(--on-primary);
-  --color-accent: var(--accent);
   --color-text: var(--text);
-  --color-muted: var(--text-muted);
   --color-success: var(--success);
   --color-warning: var(--warning);
+  --color-streak: var(--streak);
   --color-danger: var(--danger);
   --color-success-bg: var(--success-bg);
   --color-warning-bg: var(--warning-bg);
   --color-danger-bg: var(--danger-bg);
+  --color-cat-1: var(--cat-1);
+  --color-cat-2: var(--cat-2);
+  --color-cat-3: var(--cat-3);
+  --color-cat-4: var(--cat-4);
+  --color-cat-5: var(--cat-5);
+  --color-cat-6: var(--cat-6);
   --shadow-pop: var(--pop-shadow);
+  --shadow-card: var(--card-shadow);
+  --color-blue-50: var(--blue-50);
+  --color-blue-100: var(--blue-100);
+  --color-blue-200: var(--blue-200);
+  --color-blue-300: var(--blue-300);
+  --color-blue-400: var(--blue-400);
+  --color-blue-500: var(--blue-500);
+  --color-blue-600: var(--blue-600);
+  --color-blue-700: var(--blue-700);
+  --color-blue-800: var(--blue-800);
+  --color-blue-900: var(--blue-900);
+  --color-ink-50: var(--ink-50);
+  --color-ink-100: var(--ink-100);
+  --color-ink-200: var(--ink-200);
+  --color-ink-300: var(--ink-300);
+  --color-ink-400: var(--ink-400);
+  --color-ink-500: var(--ink-500);
+  --color-ink-600: var(--ink-600);
+  --color-ink-700: var(--ink-700);
+  --color-ink-800: var(--ink-800);
+  --color-ink-900: var(--ink-900);
   --font-sans: var(--font-plex), system-ui, sans-serif;
 }
 
-body {
-  background: var(--bg);
-  color: var(--text);
-  font-family: var(--font-plex), system-ui, sans-serif;
-  font-size: 15px;
-  overflow-x: hidden;
+/* Base element styles sit in a layer so shadcn / Tailwind utilities override them. */
+@layer base {
+  * { border-color: var(--border); }
+  body {
+    background: var(--background);
+    color: var(--foreground);
+    font-family: var(--font-plex), system-ui, sans-serif;
+    font-size: 15px;
+    overflow-x: hidden;
+    -webkit-font-smoothing: antialiased;
+  }
+  h1, h2 { text-wrap: balance; letter-spacing: -0.01em; }
+  ::selection { background: var(--blue-100); color: var(--foreground); }
+  html { scrollbar-color: var(--line-strong) transparent; accent-color: var(--primary); }
+  input, textarea { caret-color: var(--primary); }
+  a { text-underline-offset: 3px; }
+
+  :focus-visible { outline: 2px solid var(--ring); outline-offset: 2px; }
+
+  /* bare form controls (pages not yet on shadcn Input / Select) */
+  input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="file"]), select, textarea {
+    background: var(--card);
+    border: 1px solid var(--input);
+    border-radius: 8px;
+    padding: 0.5rem 0.75rem;
+    min-height: 2.75rem;
+    color: var(--foreground);
+    min-width: 0;
+    transition: border-color 150ms, box-shadow 150ms;
+  }
+  input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="file"]):focus-visible, select:focus-visible, textarea:focus-visible {
+    outline: none;
+    border-color: var(--ring);
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--ring) 22%, transparent);
+  }
+  input::placeholder, textarea::placeholder { color: var(--muted-foreground); opacity: 1; }
+  @media (min-width: 1024px) {
+    input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="file"]), select { min-height: 2.25rem; padding: 0.35rem 0.65rem; }
+  }
+  input[type="checkbox"] { width: 1.1rem; height: 1.1rem; accent-color: var(--primary); }
+  input[type="range"] { accent-color: var(--primary); }
+
+  dialog { box-shadow: var(--pop-shadow); border-radius: 14px; }
+  dialog::backdrop { background: rgb(15 23 42 / 0.45); }
 }
 
-h1, h2 { text-wrap: balance; letter-spacing: -0.01em; }
 .num { font-variant-numeric: tabular-nums; }
-::selection { background: var(--primary-soft); color: var(--text); }
-html { scrollbar-color: var(--line-strong) transparent; accent-color: var(--primary); }
-input, textarea { caret-color: var(--primary); }
-a { text-underline-offset: 3px; }
 
-:focus-visible {
-  outline: 2px solid var(--primary);
-  outline-offset: 2px;
-}
+/* Tailwind 4 hardcodes bare `rounded` to 4px; the modern radius makes it 8px (controls). */
+@layer utilities { .rounded { border-radius: 8px; } }
 
-input:not([type="checkbox"]):not([type="range"]), select, textarea {
-  background: var(--surface);
-  border: 1px solid var(--line-strong);
-  border-radius: 4px;
-  padding: 0.5rem 0.75rem;
-  min-height: 2.75rem;
-  color: var(--text);
-  min-width: 0;
-}
-input::placeholder { color: var(--text-muted); opacity: 1; }
-@media (min-width: 1024px) {
-  input:not([type="checkbox"]):not([type="range"]), select { min-height: 2.25rem; padding: 0.35rem 0.65rem; }
-}
-input[type="checkbox"] { width: 1.1rem; height: 1.1rem; accent-color: var(--primary); }
-input[type="range"] { accent-color: var(--primary); }
+/* -- Motion: precise, calm, never bouncy. Loops sit inside <Loop>, which sets [data-paused] offscreen/hidden. */
+:root { --ease-out: cubic-bezier(0.16, 1, 0.3, 1); }
+[data-paused] *, [data-paused]::before, [data-paused]::after { animation-play-state: paused !important; }
 
-dialog { box-shadow: var(--pop-shadow); }
-dialog::backdrop { background: rgb(10 15 25 / 0.45); }
+/* app: live dot, streak flame, skeleton */
+.live-dot::after { content: ""; position: absolute; inset: 0; border-radius: 9999px; background: var(--success); animation: live-ring 2.4s var(--ease-out) infinite; }
+@keyframes live-ring { 0% { transform: scale(1); opacity: 0.5; } 70%, 100% { transform: scale(2.6); opacity: 0; } }
+.flame { transform-origin: 50% 90%; animation: flame 2.8s ease-in-out infinite; }
+@keyframes flame { 0%, 100% { transform: scale(1) rotate(0); } 30% { transform: scale(1.06, 1.1) rotate(-3deg); } 55% { transform: scale(0.98, 1.03) rotate(2deg); } 80% { transform: scale(1.04, 1.07) rotate(-1deg); } }
+.skeleton { position: relative; overflow: hidden; background: var(--subtle); }
+.skeleton::after { content: ""; position: absolute; inset: 0; transform: translateX(-100%); background: linear-gradient(90deg, transparent, color-mix(in srgb, var(--surface) 70%, transparent), transparent); animation: shimmer 1.4s var(--ease-out) infinite; }
+@keyframes shimmer { to { transform: translateX(100%); } }
+
+/* the month that is due: a slow outward ring */
+.streak-due::after { content: ""; position: absolute; inset: -1px; border-radius: 8px; border: 1px solid var(--primary); animation: due-ring 2.2s var(--ease-out) infinite; }
+@keyframes due-ring { 0% { transform: scale(1); opacity: 0.6; } 80%, 100% { transform: scale(1.12, 1.25); opacity: 0; } }
+
+@media (prefers-reduced-motion: reduce) {
+  .streak-due::after { display: none; }
+  .live-dot::after, .skeleton::after { display: none; }
+  .flame { animation: none; }
+}

@@ -1,5 +1,6 @@
 "use client";
 import { useEffect, useState } from "react";
+import { TriangleAlert } from "lucide-react";
 import { api, errorText, type TaxResult } from "@/lib/api";
 import { baht } from "@/lib/format";
 import { Money, Stagger } from "@/components/motion";
@@ -76,8 +77,8 @@ export default function Tax() {
         </div>
       )}
       <div className="mt-5"><TaxCalc year={res.year} monthlySalary={Math.round(t.grossIncome / 12)} /></div>
-      <p role="note" className="mt-5 rounded bg-warning-bg p-4 text-sm font-medium text-warning">
-        ⚠️ ประมาณการ ไม่ใช่คำแนะนำทางภาษี ตรวจสอบกับกรมสรรพากรก่อนยื่นจริง
+      <p role="note" className="mt-5 flex gap-1.5 rounded bg-warning-bg p-4 text-sm font-medium text-warning">
+        <TriangleAlert aria-hidden size={16} className="mt-0.5 shrink-0" />ประมาณการ ไม่ใช่คำแนะนำทางภาษี ตรวจสอบกับกรมสรรพากรก่อนยื่นจริง
       </p>
     </Stagger>
   );

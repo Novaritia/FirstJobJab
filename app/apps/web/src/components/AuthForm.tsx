@@ -2,6 +2,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { Hand } from "lucide-react";
 import { MOCK, api, errorText, json } from "@/lib/api";
 
 const DEMO = { email: "demo@firstjobjab.app", password: "demo1234" };
@@ -37,22 +38,22 @@ export function AuthForm({ mode }: { mode: "login" | "register" }) {
   }
 
   return (
-    <main className="mx-auto flex w-full max-w-md flex-1 flex-col justify-center px-4 py-10">
-      <Link href="/" className="mb-6 text-center text-xl font-bold text-primary">FirstJobJab</Link>
+    <main className="mx-auto flex w-full max-w-md flex-1 flex-col px-4 py-8 sm:justify-center sm:py-12">
+      <Link href="/" className="mx-auto mb-6 inline-flex min-h-11 items-center px-2 text-xl font-bold text-primary">FirstJobJab</Link>
       {me ? (
         <Card className="text-center">
-          <div className="flex justify-center"><Initial name={me.displayName} /></div>
-          <h1 className="mt-3 text-xl font-semibold">คุณเข้าสู่ระบบแล้วในชื่อ {me.displayName}</h1>
-          <p className="mt-1 text-sm text-muted">{me.email}</p>
-          <div className="mt-6 flex flex-wrap justify-center gap-3">
-            <ButtonLink href="/dashboard">ไปที่แดชบอร์ด</ButtonLink>
-            <Button variant="danger" onClick={() => logout(router)}>ออกจากระบบ</Button>
+          <div className="flex justify-center"><Initial name={me.displayName} className="size-12 text-lg" /></div>
+          <h1 className="mt-3 text-xl font-semibold text-balance">คุณเข้าสู่ระบบแล้ว</h1>
+          <p className="mt-1 break-words"><span className="font-medium">{me.displayName}</span> <span className="block text-sm text-muted">{me.email}</span></p>
+          <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:justify-center">
+            <ButtonLink href="/dashboard" className="max-sm:w-full">ไปที่แดชบอร์ด</ButtonLink>
+            <Button variant="danger" className="max-sm:w-full" onClick={() => logout(router)}>ออกจากระบบ</Button>
           </div>
         </Card>
       ) : me === undefined ? <Card aria-busy className="h-64" /> : (
       <Card>
         <h1 className="mb-1 text-2xl font-bold">{reg ? "สมัครสมาชิก" : "เข้าสู่ระบบ"}</h1>
-        <p className="mb-6 text-muted">{reg ? "เริ่มจาก statement ไม่กี่ไฟล์ ใช้เวลา 2 นาที" : "ยินดีต้อนรับกลับ 👋"}</p>
+        <p className="mb-6 text-muted">{reg ? "เริ่มจาก statement ไม่กี่ไฟล์ ใช้เวลา 2 นาที" : <span className="inline-flex items-center gap-1.5">ยินดีต้อนรับกลับ <Hand aria-hidden size={16} /></span>}</p>
         <form onSubmit={submit} className="flex flex-col gap-4">
           {reg && (
             <Field label="ชื่อเล่น" required>
@@ -67,8 +68,8 @@ export function AuthForm({ mode }: { mode: "login" | "register" }) {
               autoComplete={reg ? "new-password" : "current-password"} />
           </Field>
           {reg && (
-            <label className="flex cursor-pointer items-start gap-2.5 text-sm">
-              <input type="checkbox" name="acceptTerms" required className="mt-0.5 shrink-0" />
+            <label className="flex min-h-11 cursor-pointer items-start gap-2.5 py-1 text-sm">
+              <input type="checkbox" name="acceptTerms" required className="mt-0.5 size-4 shrink-0 accent-primary" />
               <span>ยอมรับ<a href="/terms" target="_blank" className="font-medium text-primary underline">ข้อกำหนดการใช้งาน</a> และ<a href="/privacy" target="_blank" className="font-medium text-primary underline">นโยบายความเป็นส่วนตัว</a><Req /></span>
             </label>
           )}
@@ -79,8 +80,9 @@ export function AuthForm({ mode }: { mode: "login" | "register" }) {
           </Button>
         </form>
         {!reg && SHOW_DEMO && (
-          <div className="mt-5 rounded bg-subtle p-4 text-sm">
-            <p className="text-muted">บัญชีเดโม: <span className="font-semibold text-text">{DEMO.email}</span> / <span className="font-semibold text-text">{DEMO.password}</span></p>
+          <div className="mt-5 rounded-md bg-subtle p-4 text-sm">
+            <p className="text-muted">บัญชีเดโม</p>
+            <p className="mt-1 break-all"><span className="font-semibold text-text">{DEMO.email}</span> <span className="text-muted">/</span> <span className="font-semibold text-text">{DEMO.password}</span></p>
             <Button variant="soft" disabled={busy} className="mt-3 w-full" onClick={() => go("/auth/login", DEMO)}>เข้าด้วยบัญชีเดโม</Button>
           </div>
         )}

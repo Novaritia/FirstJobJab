@@ -29,10 +29,21 @@ Spec: `../01-brainstorm/idea-first-jobber-money.md` · Tech plan: `../03-tech/te
 | `apps/api` chat: POST /chat (Gemini tools → OpenAI → Thai rule fallback), POST /chat/voice (ElevenLabs STT→chat→TTS) | ✅ build + 15 unit tests; /chat live-tested with Gemini; voice untested (no ElevenLabs key) |
 | `apps/api` security: login history (IP AES-encrypted, GeoIP city), sessions list/revoke, ToS/Privacy consent at signup + reconsent on version change, DELETE /account (anonymise, keep consents+audit) | ✅ build + 24 unit + 2 e2e; curl ok. geoip-lite adds ~150MB to image |
 | Docker (`Dockerfile`, `docker-compose.yml`) | ✅ full build ok; api + web containers start (07:45). Build needs dummy DATABASE_URL (in Dockerfile) |
-| OCR (Thai, slips + scanned PDF) | 🔄 agent started 08:05 — research GitHub, tesseract.js tha likely; docs/ocr.md |
+| OCR (Thai, slips + scanned PDF + passbook photos) | ✅ 10-16 08:10: PaddleOCR PP-OCRv5 Thai via RapidOCR sidecar `apps/ocr` (compose service `ocr`, `OCR_URL`), tesseract fallback. Gemini removed from OCR (user: Gemini = chatbot only). See docs/ocr.md. Passbook photo import ✅ `POST /uploads/passbook` + web toggle + `mock-data/passbook/` (shared 46/46, api 26/26); not yet run vs DB or on a real phone |
 | Assistant chat + voice (ElevenLabs STT/TTS) | 🔄 api agent: POST /chat, /chat/voice; web agent: /assistant page after redesign |
 | Pitch deck / demo script | ❌ not started (`../05-pitch/` has old outlines for a dropped idea) |
 | Git commit / push | ✅ f14f320 pushed to main (app/ + 2 new docs). Older uncommitted docs from earlier sessions left untouched |
+
+## Session 2026-10-16 (09:00–10:00, Windows PC, parallel subagents)
+- UI renovated onto **shadcn/ui** (`src/components/shadcn/*`, alias `@/components/shadcn`; `@/components/ui` keeps the old API on top). Theme now **modern minimal white + blue** (tokens in globals.css, see DESIGN.md). Sharp-corner/Stripe rule superseded.
+- Landing: looping live-audit hero, ledger grid, ticker, streak section (hook = upload + 🔥 streak), pricing (#pricing, navy band), session-aware nav. Landing CSS in `src/app/landing.css`.
+- Dashboard: streak hero → spending donut → income split donut + KPI tiles → 6-month trend → next steps. Recharts lazy-loaded.
+- Transactions: search/filters/paging (20/50/100/custom) via `GET /transactions?q&direction&category&…&limit&page` → `{transactions,total,accounts}`; optimistic edits.
+- Settings: 4 sections (account, security, consents, my data); `/settings/security` redirects to `/settings`.
+- TopLoader bar (`components/TopLoader.tsx`, `instrumentation-client.ts`), `(app)/loading.tsx`, GET dedupe in lib/api.ts. `<Toaster/>` (sonner) in root layout.
+- /terms and /privacy drafts (`components/LegalPage.tsx`); policy version `2026-10-16` lives in 3 places: api security-util.ts, AuthForm.tsx, LegalPage.tsx.
+- Checks: shared 46/46, api 30/30, web tsc+eslint clean, all routes 200. **Not yet clicked through in a browser by a human.**
+- Open: emoji→icon only on transactions page (user to decide app-wide); no change-password feature; GEMINI_API_KEY still empty in app/.env.
 
 ## Run locally (from `app/`)
 ```sh
@@ -41,6 +52,7 @@ pnpm --filter @fjm/shared build      # api imports shared/dist
 cd apps/api && npx prisma migrate deploy && pnpm build && pnpm seed && pnpm start:prod   # :4000
 sh demo-preload.sh                   # loads Apr–Aug for demo user → streak 5/6
 pnpm --filter web dev                # :3000
+# OCR sidecar (optional; else tesseract): cd apps/ocr && pip install rapidocr==3.10.0 onnxruntime fastapi uvicorn python-multipart opencv-python-headless && uvicorn server:app --port 8765
 ```
 Full stack in Docker: `docker compose --profile full up -d --build`.
 Demo login: `demo@firstjobjab.app` / `demo1234`. Live demo: upload `mock-data/KBANK_2026-09.pdf` (+ BBL) → streak 6/6. `BROKEN_KBANK_2026-06.pdf` shows ⚠️ rows.

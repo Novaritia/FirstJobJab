@@ -133,12 +133,12 @@ export function parseStatement(lines: string[]): ParsedStatement {
 }
 
 /** Candidate PDF passwords from PII, most likely first. Real bank rules unverified, so we try several. */
-export function pdfPasswordCandidates(bank: Bank, pii: { birthDate: string; nationalId: string }): string[] {
-  const [y, m, d] = pii.birthDate.split('-');
-  const be = String(parseInt(y, 10) + 543);
-  const id = pii.nationalId.replace(/\D/g, '');
-  const birth = [`${d}${m}${y}`, `${d}${m}${be}`, `${y}${m}${d}`, `${be}${m}${d}`, `${d}${m}${y.slice(2)}`, `${d}${m}${be.slice(2)}`];
-  const ids = id ? [id.slice(-4), id.slice(-6), id, id.slice(-4) + d + m] : [];
+export function pdfPasswordCandidates(bank: Bank, pii: { birthDate?: string | null; nationalId?: string | null }): string[] {
+  const [y = '', m = '', d = ''] = (pii.birthDate ?? '').split('-');
+  const be = y ? String(parseInt(y, 10) + 543) : '';
+  const id = (pii.nationalId ?? '').replace(/\D/g, '');
+  const birth = y ? [`${d}${m}${y}`, `${d}${m}${be}`, `${y}${m}${d}`, `${be}${m}${d}`, `${d}${m}${y.slice(2)}`, `${d}${m}${be.slice(2)}`] : [];
+  const ids = id ? [id.slice(-4), id.slice(-6), id, ...(y ? [id.slice(-4) + d + m] : [])] : [];
   // shortcut: same order for both banks until real e-statement password rules are confirmed
   void bank;
   return [...new Set([...birth, ...ids].filter(Boolean))];

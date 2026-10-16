@@ -2,6 +2,7 @@ import type {
   BalanceCheckResult, Bank, Category, Direction, GrowthInput, GrowthPoint, MonthSummary,
   ParsedRow, Source, TaxResult,
 } from "@fjm/shared";
+import { busy } from "./busy";
 
 // Types from app/API.md
 export type User = { id: string; email: string; displayName: string; hasPii: boolean; createdAt: string; needsReconsent?: boolean };
@@ -24,7 +25,11 @@ export type Tx = {
 export type TxEdit = { field: string; oldValue: string | null; newValue: string | null; at: string };
 export type Summary = { months: MonthSummary[]; topSpend: { category: Category; amount: number }[]; text: string };
 export type LoanReady = { continuousMonths: number; required: number; avgIncome: number; avgSpend: number; maxInstallment: number };
-export type AuditEntry = { action: string; target: string; at: string };
+export type AuditEntry = { action: string; target: string | null; at: string };
+export type Profile = {
+  displayName: string; email: string; fullName: string | null; phone: string | null; birthDate: string | null;
+  nationalIdMasked: string | null; hasNationalId: boolean; monthlySalary: number | null; // satang
+};
 export type LoginRow = { at: string; success: boolean; ip: string; device: string; location: string; current: boolean };
 export type SessionRow = { id: string; createdAt: string; lastSeenAt: string; device: string; location: string; current: boolean };
 export type ChatMsg = { role: "user" | "assistant"; content: string };
@@ -41,24 +46,38 @@ export const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:4000
 export const MOCK = process.env.NEXT_PUBLIC_MOCK === "1";
 
 export class ApiError extends Error {
-  constructor(public status: number, message: string) { super(message); }
+  constructor(public status: number, message: string, public fields?: Record<string, string>) { super(message); }
 }
 
-/** Raw fetch against the API (cookie auth). Returns the Response so callers can read blobs. */
-export async function apiRaw(path: string, init: RequestInit = {}): Promise<Response> {
+/** Raw fetch against the API (cookie auth). Returns the Response so callers can read blobs. Drives TopLoader. */
+export function apiRaw(path: string, init: RequestInit = {}): Promise<Response> {
+  return busy.track(send(path, init));
+}
+
+async function send(path: string, init: RequestInit): Promise<Response> {
   const headers = new Headers(init.headers);
   if (init.body && !(init.body instanceof FormData)) headers.set("Content-Type", "application/json");
   const req = { ...init, headers, credentials: "include" as const };
   const res = MOCK ? await (await import("./mock")).mockFetch(path, req) : await fetch(API_URL + path, req);
   if (!res.ok) {
     const body = await res.json().catch(() => ({}));
-    throw new ApiError(res.status, body.error ?? res.statusText ?? "error");
+    throw new ApiError(res.status, body.error ?? res.statusText ?? "error", body.fields);
   }
   return res;
 }
 
-export async function api<T>(path: string, init: RequestInit = {}): Promise<T> {
-  return (await apiRaw(path, init)).json() as Promise<T>;
+const inflight = new Map<string, Promise<unknown>>();
+
+/** JSON call. Identical GETs already in flight share one request (layout + page, StrictMode double effects). */
+export function api<T>(path: string, init: RequestInit = {}): Promise<T> {
+  const load = () => apiRaw(path, init).then((r) => r.json() as Promise<T>);
+  if ((init.method ?? "GET") !== "GET") return load();
+  let p = inflight.get(path);
+  if (!p) {
+    p = load().finally(() => inflight.delete(path));
+    inflight.set(path, p);
+  }
+  return p as Promise<T>;
 }
 
 export const json = (method: string, body?: unknown): RequestInit =>
@@ -68,6 +87,8 @@ export function errorText(e: unknown): string {
   if (e instanceof ApiError) {
     if (e.status === 401) return "อีเมลหรือรหัสผ่านไม่ถูกต้อง";
     if (e.message === "unsupported_format") return "อ่านไฟล์นี้ไม่ได้ — ตอนนี้รองรับ statement KBank และ Bangkok Bank";
+    if (e.message === "not_an_image") return "รองรับเฉพาะรูป JPG/PNG";
+    if (e.message === "already_imported") return "ไฟล์นี้นำเข้าไปแล้ว";
     return e.message;
   }
   return "เชื่อมต่อเซิร์ฟเวอร์ไม่ได้ ลองใหม่อีกครั้ง";

@@ -1,6 +1,6 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
-import { Mic, Send, Square } from "lucide-react";
+import { Mic, Send, Square, TriangleAlert } from "lucide-react";
 import { motion, useMotionValue, useTransform } from "motion/react";
 import { EASE } from "@/components/motion";
 import { ApiError, api, errorText, json, type ChatMsg, type ChatReply, type DataRow, type VoiceReply } from "@/lib/api";
@@ -17,7 +17,8 @@ export default function Assistant() {
   const [notice, setNotice] = useState("");
   const endRef = useRef<HTMLDivElement>(null);
 
-  useEffect(() => endRef.current?.scrollIntoView({ block: "end" }), [msgs]);
+  // braces: scrollIntoView may return a Promise, which React would treat as a cleanup fn and crash
+  useEffect(() => { if (msgs.length) endRef.current?.scrollIntoView({ block: "end", behavior: "smooth" }); }, [msgs]);
   const history = (extra: Msg[] = []) => [...msgs, ...extra].map(({ role, content }) => ({ role, content }));
 
   async function ask(text: string) {
@@ -71,7 +72,7 @@ export default function Assistant() {
           </div>
         } />
 
-      {notice && <p role="status" className="mb-4 rounded border border-warning/30 bg-warning-bg px-4 py-2.5 text-sm text-warning">⚠️ {notice}</p>}
+      {notice && <p role="status" className="mb-4 flex gap-1.5 rounded border border-warning/30 bg-warning-bg px-4 py-2.5 text-sm text-warning"><TriangleAlert aria-hidden size={16} className="mt-0.5 shrink-0" />{notice}</p>}
 
       <section aria-label="บทสนทนา" aria-live="polite" className="flex min-h-64 flex-col gap-4 rounded-md border border-line bg-surface p-4 sm:p-5">
         {msgs.length === 0 && (

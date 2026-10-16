@@ -5,7 +5,7 @@ import { projectGrowth } from '@fjm/shared';
 import { PrismaService } from './prisma.service.js';
 import { AuthGuard, UserId } from './auth.js';
 import { StatsService, todayIct } from './stats.service.js';
-import { parse } from './validation.js';
+import { paging, parse } from './validation.js';
 import { tts } from './elevenlabs.js';
 
 const Growth = z.object({
@@ -61,8 +61,12 @@ export class InsightsController {
   }
 
   @Get('audit')
-  async audit(@UserId() userId: string) {
-    const rows = await this.prisma.auditLog.findMany({ where: { userId }, orderBy: { id: 'desc' }, take: 200, select: { action: true, target: true, at: true } });
-    return { entries: rows };
+  async audit(@UserId() userId: string, @Query() q: unknown) {
+    const where = { userId };
+    const [rows, total] = await Promise.all([
+      this.prisma.auditLog.findMany({ where, orderBy: { id: 'desc' }, ...paging(q, 200), select: { action: true, target: true, at: true } }),
+      this.prisma.auditLog.count({ where }),
+    ]);
+    return { entries: rows, total };
   }
 }

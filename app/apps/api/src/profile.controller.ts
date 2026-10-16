@@ -5,6 +5,7 @@ import { AuditService } from './audit.service.js';
 import { AuthGuard, UserId, type Req } from './auth.js';
 import { encryptStr, envKey } from './crypto.js';
 import { parse } from './validation.js';
+import { ProfileService, parseProfile } from './profile.service.js';
 import { acceptConsents, PRIVACY_VERSION, REQUIRED_PURPOSES, TERMS_VERSION } from './security-util.js';
 
 export const CONSENT_VERSION = '2026-10-16';
@@ -20,9 +21,23 @@ const Reconsent = z.object({ termsVersion: z.literal(TERMS_VERSION), privacyVers
 @Controller('profile')
 @UseGuards(AuthGuard)
 export class ProfileController {
-  constructor(private prisma: PrismaService, private audit: AuditService) {}
+  constructor(private prisma: PrismaService, private audit: AuditService, private profile: ProfileService) {}
+
+  @Get()
+  get(@UserId() userId: string) {
+    return this.profile.view(userId);
+  }
+
+  @Put()
+  async put(@UserId() userId: string, @Body() body: unknown, @NestReq() req: Req) {
+    const changed = await this.profile.update(userId, parseProfile(body));
+    if (changed.length) await this.audit.log(req, 'profile_change', { target: changed.join(',') }); // field names only, never values
+    return this.profile.view(userId);
+  }
+
 
   @Put('pii')
+  /** Onboarding shortcut (kept for compatibility). */
   async putPii(@UserId() userId: string, @Body() body: unknown, @NestReq() req: Req) {
     const b = parse(PiiBody, body);
     const key = envKey('PII_KEY');

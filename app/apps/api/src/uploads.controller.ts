@@ -5,7 +5,7 @@ import { mkdir, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { z } from 'zod';
 import {
-  checkBalances, detectBank, parseStatement, pdfItemsToLines, pdfPasswordCandidates,
+  checkBalances, detectBank, parsePassbook, parseStatement, pdfItemsToLines, pdfPasswordCandidates,
   type BalanceCheckResult, type Bank, type Category, type ParsedStatement,
 } from '@fjm/shared';
 import { PrismaService } from './prisma.service.js';
@@ -14,6 +14,7 @@ import { AuthGuard, UserId, type Req } from './auth.js';
 import { decryptStr, encrypt, envKey, sha256 } from './crypto.js';
 import { extractPdfItems, PdfPasswordError, renderPdfPages, type PdfItem } from './pdf.js';
 import { ocrPages } from './ocr.js';
+import { mimeOf } from './slips.controller.js';
 import { categorize } from './categorize.js';
 import { StatsService } from './stats.service.js';
 import { parse } from './validation.js';
@@ -21,6 +22,7 @@ import { parse } from './validation.js';
 export const UPLOAD_DIR = join(process.cwd(), 'uploads');
 export const MAX_PDF_BYTES = 10 * 1024 * 1024;
 const MAX_OCR_PAGES = 15; // ~2.5 s/page on CPU
+const MAX_PAGE_BYTES = 10 * 1024 * 1024;
 const BANKS: Bank[] = ['KBANK', 'BBL'];
 
 interface Parsed { statement: ParsedStatement; categories: Category[] }
@@ -83,6 +85,40 @@ export class UploadsController {
     } catch {
       throw new HttpException('unsupported_format', 422);
     }
+    return this.store(userId, req, statement, hash, file, 'pdf', { ocr });
+  }
+
+  /** Passbook page photos (multipart repeated `images`, in page order; optional `bank` KBANK|BBL for pages without a logo) → same review payload as a PDF. */
+  @Post('passbook')
+  async passbook(@UserId() userId: string, @NestReq() req: Req) {
+    const pages: Buffer[] = [];
+    let bank: Bank | undefined;
+    for await (const part of req.parts({ limits: { fileSize: MAX_PAGE_BYTES, files: MAX_OCR_PAGES } })) {
+      if (part.type === 'file') {
+        if (part.fieldname !== 'images') { part.file.resume(); continue; }
+        pages.push(await part.toBuffer()); // throws 413 when over fileSize
+      } else if (part.fieldname === 'bank' && BANKS.includes(part.value as Bank)) bank = part.value as Bank;
+    }
+    if (!pages.length) throw new HttpException('images_required', 400);
+    if (pages.some((p) => !mimeOf(p))) throw new HttpException('not_an_image', 415);
+
+    const hash = sha256(Buffer.concat(pages.map(sha256).map((h) => Buffer.from(h))));
+    if (await this.prisma.upload.findFirst({ where: { userId, sha256: hash, status: 'confirmed' } })) {
+      throw new HttpException('already_imported', 409);
+    }
+    let statement: ParsedStatement;
+    try {
+      statement = parsePassbook(await ocrPages(pages), bank);
+    } catch {
+      throw new HttpException('unsupported_format', 422);
+    }
+    // one encrypted blob (u32 length + bytes per page) so account deletion's single unlink still works
+    const blob = Buffer.concat(pages.flatMap((p) => { const n = Buffer.alloc(4); n.writeUInt32BE(p.length); return [n, p]; }));
+    return this.store(userId, req, statement, hash, blob, 'passbook', { ocr: true, pages: pages.length });
+  }
+
+  /** Categorise, check, persist as a pending upload with the encrypted source file, audit; returns the review payload. */
+  private async store(userId: string, req: Req, statement: ParsedStatement, hash: string, file: Buffer, ext: string, meta: { ocr: boolean; pages?: number }) {
     const rules = await this.prisma.categoryRule.findMany({ where: { userId } });
     const parsed: Parsed = { statement, categories: statement.rows.map((r) => categorize(r.description, r.direction, rules)) };
     const check = checkBalances(statement);
@@ -94,14 +130,14 @@ export class UploadsController {
       },
     });
     await mkdir(UPLOAD_DIR, { recursive: true });
-    const filePath = join(UPLOAD_DIR, `${upload.id}.pdf.enc`);
+    const filePath = join(UPLOAD_DIR, `${upload.id}.${ext}.enc`);
     await writeFile(filePath, encrypt(file, envKey('FILE_KEY')));
     await this.prisma.upload.update({ where: { id: upload.id }, data: { filePath } });
-    await this.audit.log(req, 'upload', { target: upload.id, after: { bank: statement.bank, sha256: hash, rows: statement.rows.length, failCount: check.failCount, ocr } });
+    await this.audit.log(req, ext === 'pdf' ? 'upload' : 'upload_passbook', { target: upload.id, after: { bank: statement.bank, sha256: hash, rows: statement.rows.length, failCount: check.failCount, ...meta } });
 
     return {
       uploadId: upload.id, bank: statement.bank, period: { start: statement.periodStart, end: statement.periodEnd },
-      accountNoMasked: statement.accountNoMasked, rows: reviewRows(parsed, check), check, ocr,
+      accountNoMasked: statement.accountNoMasked, rows: reviewRows(parsed, check), check, ...meta,
     };
   }
 
@@ -116,7 +152,8 @@ export class UploadsController {
     const pii = await this.prisma.pii.findUnique({ where: { userId } });
     if (pii) {
       const key = envKey('PII_KEY');
-      const p = { birthDate: decryptStr(pii.birthDateEnc, key), nationalId: decryptStr(pii.nationalIdEnc, key) };
+      const dec = (s: string | null) => (s ? decryptStr(s, key) : null);
+      const p = { birthDate: dec(pii.birthDateEnc), nationalId: dec(pii.nationalIdEnc) };
       for (const cand of [...new Set(BANKS.flatMap((b) => pdfPasswordCandidates(b, p)))]) {
         try {
           return { pages: await extractPdfItems(file, cand), password: cand };
@@ -173,10 +210,13 @@ export class UploadsController {
         select: { date: true, time: true, amount: true, balance: true },
       });
       const key = (r: { date: string; time?: string | null; amount: number; balance?: number | null }) => `${r.date}|${r.time ?? ''}|${r.amount}|${r.balance ?? ''}`;
+      const loose = (r: { date: string; amount: number; balance?: number | null }) => `${r.date}|${r.amount}|${r.balance ?? ''}`;
       const seen = new Set(existing.map(key));
+      const seenLoose = new Set(existing.map(loose)); // passbook rows have no time: match on date|amount|balance
       const data = s.rows.flatMap((r, i) => {
-        if (seen.has(key(r))) return [];
+        if (seen.has(key(r)) || (!r.time && seenLoose.has(loose(r)))) return [];
         seen.add(key(r));
+        seenLoose.add(loose(r));
         return [{
           userId, accountId: account.id, uploadId: id, date: r.date, time: r.time ?? null, description: r.description,
           channel: r.channel ?? null, amount: r.amount, direction: r.direction, balance: r.balance,

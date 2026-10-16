@@ -1,0 +1,40 @@
+/* Landing-only styles. Colours come from the theme tokens in globals.css, except the one deep pricing band. */
+:root {
+  --band: #0C1A3A;
+  --on-band: #E8EEFA;
+  --on-band-muted: #A9B8D6;
+  --band-line: #263A66;
+  --lp-tint: color-mix(in srgb, var(--primary) 6%, var(--surface));
+}
+@media (prefers-color-scheme: dark) {
+  :root { --band: #0F1F45; --band-line: #2C4170; }
+}
+@media (prefers-reduced-motion: no-preference) { html { scroll-behavior: smooth; } }
+.lp [id] { scroll-margin-top: 4.5rem; }
+
+/* landing hero: faint ledger grid, fading at the edges, with a rare thin light running along one line */
+.ledger-grid {
+  background-image: linear-gradient(to bottom, var(--line) 1px, transparent 1px), linear-gradient(to right, var(--line) 1px, transparent 1px);
+  background-size: 48px 48px;
+  mask-image: radial-gradient(ellipse 70% 65% at 50% 45%, #000 30%, transparent 100%);
+  opacity: 0.7;
+}
+.ledger-pulse-x, .ledger-pulse-y { position: absolute; background: var(--primary); opacity: 0; will-change: transform; }
+.ledger-pulse-x { left: 0; height: 1px; width: 160px; top: 192px; mask-image: linear-gradient(to right, transparent, #000 60%, transparent); animation: ledger-x 11s var(--ease-out, cubic-bezier(0.16, 1, 0.3, 1)) infinite 1.5s; }
+.ledger-pulse-y { top: 0; width: 1px; height: 140px; left: 336px; mask-image: linear-gradient(to bottom, transparent, #000 60%, transparent); animation: ledger-y 13s var(--ease-out, cubic-bezier(0.16, 1, 0.3, 1)) infinite 6s; }
+@keyframes ledger-x { 0% { transform: translateX(-160px); opacity: 0; } 4% { opacity: 0.55; } 34% { opacity: 0.55; } 40%, 100% { transform: translateX(min(1100px, 100vw)); opacity: 0; } }
+@keyframes ledger-y { 0% { transform: translateY(-140px); opacity: 0; } 4% { opacity: 0.45; } 30% { opacity: 0.45; } 36%, 100% { transform: translateY(640px); opacity: 0; } }
+
+/* live audit figure */
+.audit-scan { background: color-mix(in srgb, var(--primary) 6%, transparent); box-shadow: inset 0 -1px 0 var(--primary), inset 0 1px 0 color-mix(in srgb, var(--primary) 35%, transparent); }
+.audit-fade { animation: audit-fade 300ms var(--ease-out, cubic-bezier(0.16, 1, 0.3, 1)); }
+@keyframes audit-fade { from { opacity: 0; } }
+
+/* synthetic transaction ticker */
+.marquee { display: flex; width: max-content; animation: marquee 60s linear infinite; }
+@keyframes marquee { to { transform: translateX(-50%); } }
+
+@media (prefers-reduced-motion: reduce) {
+  .ledger-pulse-x, .ledger-pulse-y { display: none; }
+  .marquee { animation: none; }
+}

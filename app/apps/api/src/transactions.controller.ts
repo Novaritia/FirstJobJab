@@ -6,10 +6,47 @@ import { AuditService } from './audit.service.js';
 import { AuthGuard, UserId, type Req } from './auth.js';
 import { rulePattern } from './categorize.js';
 import { parse } from './validation.js';
-import type { Transaction } from './generated/prisma/client.js';
+import { buildCsv } from './export.js';
+import { exportRows } from './export.controller.js';
+import { CATEGORY_TH } from './stats.service.js';
+import type { Prisma, Transaction } from './generated/prisma/client.js';
 
 const date = z.string().regex(/^\d{4}-\d{2}-\d{2}$/);
-const Filter = z.object({ from: date.optional(), to: date.optional(), accountId: z.string().max(64).optional() });
+const satang = z.coerce.number().int().min(0).max(1e12);
+export const Filter = z.object({
+  from: date.optional(), to: date.optional(), accountId: z.string().max(64).optional(),
+  q: z.string().trim().max(100).transform((s) => s.normalize('NFC')).optional(), // Thai: NFC so composed vowels/tones match
+  direction: z.enum(['in', 'out']).optional(),
+  category: z.enum(CATEGORIES).optional(),
+  source: z.enum(['statement', 'slip', 'manual']).optional(),
+  minAmount: satang.optional(), maxAmount: satang.optional(),
+  hidden: z.enum(['include', 'only', 'exclude']).default('include'), // include = previous behaviour
+  limit: z.coerce.number().int().min(1).max(500).default(50),
+  offset: z.coerce.number().int().min(0).default(0),
+  page: z.coerce.number().int().min(1).optional(), // alternative to offset
+  sort: z.enum(['date_desc', 'date_asc', 'amount_desc', 'amount_asc']).default('date_desc'),
+});
+
+/** Filter → Prisma args (pure, unit-tested). */
+export function listQuery(userId: string, f: z.infer<typeof Filter>) {
+  const cats = f.q ? (Object.keys(CATEGORY_TH) as (keyof typeof CATEGORY_TH)[]).filter((c) => CATEGORY_TH[c].includes(f.q!) || c.includes(f.q!.toLowerCase())) : [];
+  const where: Prisma.TransactionWhereInput = {
+    userId, accountId: f.accountId, direction: f.direction, category: f.category, source: f.source,
+    date: { gte: f.from, lte: f.to },
+    amount: { gte: f.minAmount, lte: f.maxAmount },
+    hidden: f.hidden === 'include' ? undefined : f.hidden === 'only',
+    OR: f.q ? [
+      { description: { contains: f.q, mode: 'insensitive' } },
+      { note: { contains: f.q, mode: 'insensitive' } },
+      ...(cats.length ? [{ category: { in: cats } }] : []),
+    ] : undefined,
+  };
+  const dir = f.sort.endsWith('asc') ? 'asc' as const : 'desc' as const;
+  const orderBy: Prisma.TransactionOrderByWithRelationInput[] = f.sort.startsWith('amount')
+    ? [{ amount: dir }, { date: 'desc' }, { id: 'asc' }]
+    : [{ date: dir }, { time: dir }, { createdAt: dir }, { id: 'asc' }];
+  return { where, orderBy, take: f.limit, skip: f.page ? (f.page - 1) * f.limit : f.offset };
+}
 const PatchBody = z.object({
   category: z.enum(CATEGORIES).optional(),
   note: z.string().max(500).nullable().optional(),
@@ -30,13 +67,6 @@ const view = (t: Transaction & { _count?: { edits: number } }) => ({
 });
 const withEdits = { _count: { select: { edits: true } } } as const;
 
-/** Escape for CSV and neutralise spreadsheet formula injection. */
-const csvCell = (v: unknown) => {
-  let s = v === null || v === undefined ? '' : String(v);
-  if (/^[=+\-@\t\r]/.test(s) && !/^-?\d+(\.\d+)?$/.test(s)) s = `'${s}`;
-  return /[",\n\r]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
-};
-
 @Controller('transactions')
 @UseGuards(AuthGuard)
 export class TransactionsController {
@@ -44,27 +74,23 @@ export class TransactionsController {
 
   @Get()
   async list(@UserId() userId: string, @Query() q: unknown) {
-    const f = parse(Filter, q);
-    const rows = await this.prisma.transaction.findMany({
-      where: { userId, accountId: f.accountId, date: { gte: f.from, lte: f.to } },
-      include: withEdits,
-      orderBy: [{ date: 'desc' }, { time: 'desc' }, { createdAt: 'desc' }],
-    });
-    return { transactions: rows.map(view) };
+    const { where, ...page } = listQuery(userId, parse(Filter, q));
+    const [rows, total, accounts] = await Promise.all([
+      this.prisma.transaction.findMany({ where, include: withEdits, ...page }),
+      this.prisma.transaction.count({ where }),
+      this.prisma.account.findMany({ where: { userId }, select: { id: true, bank: true, accountNoMasked: true, accountName: true }, orderBy: { bank: 'asc' } }),
+    ]);
+    return { transactions: rows.map(view), total, accounts };
   }
 
+  /** Legacy: everything (incl. hidden + own transfers), new accountant columns. Prefer GET /export/statement.csv?from&to. */
   @Get('export.csv')
   @Header('content-type', 'text/csv; charset=utf-8')
   @Header('content-disposition', 'attachment; filename="firstjobjab-transactions.csv"')
   async exportCsv(@UserId() userId: string, @NestReq() req: Req) {
-    const rows = await this.prisma.transaction.findMany({ where: { userId }, include: { account: true }, orderBy: [{ date: 'asc' }, { time: 'asc' }] });
-    const head = ['date', 'time', 'bank', 'account', 'description', 'direction', 'amount_baht', 'balance_baht', 'category', 'note', 'source', 'verified', 'hidden'];
-    const lines = rows.map((t) => [
-      t.date, t.time, t.account.bank, t.account.accountNoMasked, t.description, t.direction, (t.amount / 100).toFixed(2),
-      t.balance === null ? '' : (t.balance / 100).toFixed(2), t.category, t.note, t.source, t.verified, t.hidden,
-    ].map(csvCell).join(','));
-    await this.audit.log(req, 'export', { after: { rows: rows.length } });
-    return '﻿' + [head.join(','), ...lines].join('\r\n'); // BOM so Excel reads Thai
+    const rows = await exportRows(this.prisma, userId, { includeHidden: true, includeTransfers: true });
+    await this.audit.log(req, 'export', { after: { kind: 'statement_csv', from: null, to: null, rows: rows.length } });
+    return buildCsv(rows);
   }
 
   @Post()

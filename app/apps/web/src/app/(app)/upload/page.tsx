@@ -1,8 +1,8 @@
 "use client";
 import { useRef, useState } from "react";
-import { FileUp, KeyRound } from "lucide-react";
+import { BookOpen, Camera, CircleCheck, FileUp, Hand, ImagePlus, KeyRound, Loader2, TriangleAlert, X } from "lucide-react";
 import { motion } from "motion/react";
-import { EASE, Rolling } from "@/components/motion";
+import { EASE, Flame, Rolling } from "@/components/motion";
 import type { Direction } from "@fjm/shared";
 import { ApiError, api, errorText, json, type ReviewRow, type Slip, type Streak, type UploadResult } from "@/lib/api";
 import { baht, dateLabel, toSatang } from "@/lib/format";
@@ -11,13 +11,18 @@ import { Badge, Button, ButtonLink, Card, ErrorNote, Field, PageTitle, RequiredL
 type Item = {
   key: string;
   file: File;
+  pages?: File[]; // passbook photos, in page order
   status: "uploading" | "password" | "error" | "review" | "done";
   error?: string;
   result?: UploadResult;
   imported?: number;
 };
 
+const nameOf = (it: Item) => (it.pages ? `สมุดบัญชี ${it.pages.length} หน้า` : it.file.name);
+
 export default function UploadPage() {
+  const [mode, setMode] = useState<"pdf" | "passbook">("pdf");
+  const [pages, setPages] = useState<File[]>([]);
   const [items, setItems] = useState<Item[]>([]);
   const [drag, setDrag] = useState(false);
   const [announce, setAnnounce] = useState("");
@@ -31,19 +36,20 @@ export default function UploadPage() {
   async function send(item: Item, password?: string) {
     patch(item.key, { status: "uploading", error: undefined });
     const form = new FormData();
-    form.append("file", item.file);
+    if (item.pages) item.pages.forEach((p) => form.append("images", p));
+    else form.append("file", item.file);
     if (password) form.append("password", password);
     try {
-      const result = await api<UploadResult>("/uploads", { method: "POST", body: form });
+      const result = await api<UploadResult>(item.pages ? "/uploads/passbook" : "/uploads", { method: "POST", body: form });
       patch(item.key, { status: "review", result });
-      setAnnounce(`${item.file.name}: อ่าน ${result.rows.length} รายการ ตรง ${result.check.okCount} ไม่ตรง ${result.check.failCount}`);
+      setAnnounce(`${nameOf(item)}: อ่าน ${result.rows.length} รายการ ตรง ${result.check.okCount} ไม่ตรง ${result.check.failCount}`);
     } catch (e) {
       if (e instanceof ApiError && e.message === "password_required") {
         patch(item.key, { status: "password", error: password ? "รหัสไม่ถูกต้อง ลองอีกครั้ง" : undefined });
-        setAnnounce(`${item.file.name}: ต้องใส่รหัส PDF`);
+        setAnnounce(`${nameOf(item)}: ต้องใส่รหัส PDF`);
       } else {
         patch(item.key, { status: "error", error: errorText(e) });
-        setAnnounce(`${item.file.name}: ${errorText(e)}`);
+        setAnnounce(`${nameOf(item)}: ${errorText(e)}`);
       }
     }
   }
@@ -72,6 +78,20 @@ export default function UploadPage() {
     }
   }
 
+  function addPages(list: FileList | null) {
+    const imgs = [...(list ?? [])].filter((f) => f.type.startsWith("image/") || /\.(jpe?g|png)$/i.test(f.name));
+    if (!imgs.length) return setAnnounce("เลือกรูปหน้าสมุดบัญชี JPG/PNG");
+    // gallery picks arrive unordered; camera/file names are usually chronological
+    setPages((xs) => [...xs, ...imgs.sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true }))]);
+  }
+
+  async function sendPassbook() {
+    const it: Item = { key: `${seq.current++}`, file: pages[0], pages, status: "uploading" };
+    setPages([]);
+    setItems((xs) => [...xs, it]);
+    await send(it);
+  }
+
   async function addFiles(list: FileList | null) {
     const files = [...(list ?? [])];
     const images = files.filter((f) => /^image\/(jpeg|png)$/.test(f.type) || /\.(jpe?g|png)$/i.test(f.name));
@@ -85,8 +105,49 @@ export default function UploadPage() {
 
   return (
     <div className="mx-auto max-w-3xl">
-      <PageTitle title="อัปโหลด statement / สลิป" sub="PDF จาก KBank หรือ Bangkok Bank (รวมไฟล์สแกน) และรูปสลิป JPG/PNG ได้หลายไฟล์พร้อมกัน" />
+      <PageTitle title="อัปโหลด statement / สลิป" sub="PDF จาก KBank หรือ Bangkok Bank (รวมไฟล์สแกน), รูปสลิป JPG/PNG หรือรูปถ่ายสมุดบัญชี" />
 
+      <div role="group" aria-label="ประเภทไฟล์" className="mb-4 inline-flex rounded border border-line bg-surface p-0.5">
+        {([["pdf", "PDF e-statement / สลิป", FileUp], ["passbook", "รูปสมุดบัญชี", BookOpen]] as const).map(([m, label, Icon]) => (
+          <button key={m} type="button" aria-pressed={mode === m} onClick={() => setMode(m)}
+            className={cx("flex min-h-11 items-center gap-2 rounded-sm px-3 text-sm font-medium sm:min-h-9",
+              mode === m ? "bg-primary-soft text-primary" : "text-muted hover:bg-subtle")}>
+            <Icon aria-hidden size={16} /> {label}
+          </button>
+        ))}
+      </div>
+
+      {mode === "passbook" ? (
+        <Card title="ถ่ายรูปสมุดบัญชี">
+          <p className="text-sm text-muted">ถ่ายทีละหน้าให้เห็นทุกแถว เรียงจากหน้าเก่าไปใหม่ ให้มีแถว ยอดยกมา (B/F) เพื่อให้ตรวจแถวแรกได้ — KBank หรือ Bangkok Bank</p>
+          <div className="mt-3 flex flex-wrap gap-3">
+            <label className="inline-flex min-h-11 cursor-pointer items-center gap-2 rounded border border-line-strong px-3 font-medium hover:bg-subtle focus-within:outline-2 focus-within:outline-primary sm:min-h-9">
+              <Camera aria-hidden size={18} /> ถ่ายรูป
+              <input type="file" accept="image/*" capture="environment" className="sr-only"
+                onChange={(e) => { addPages(e.target.files); e.target.value = ""; }} />
+            </label>
+            <label className="inline-flex min-h-11 cursor-pointer items-center gap-2 rounded border border-line-strong px-3 font-medium hover:bg-subtle focus-within:outline-2 focus-within:outline-primary sm:min-h-9">
+              <ImagePlus aria-hidden size={18} /> เลือกรูป
+              <input type="file" accept="image/*" multiple className="sr-only"
+                onChange={(e) => { addPages(e.target.files); e.target.value = ""; }} />
+            </label>
+          </div>
+          {pages.length > 0 && (
+            <>
+              <ol className="mt-4 divide-y divide-line rounded border border-line">
+                {pages.map((p, i) => (
+                  <li key={`${i}-${p.name}`} className="flex items-center justify-between gap-3 px-3 py-2 text-sm">
+                    <span className="min-w-0 truncate"><span className="num text-muted">หน้า {i + 1}</span> · {p.name}</span>
+                    <button type="button" aria-label={`ลบหน้า ${i + 1}`} onClick={() => setPages((xs) => xs.filter((_, j) => j !== i))}
+                      className="grid size-9 place-items-center rounded text-muted hover:bg-subtle"><X aria-hidden size={16} /></button>
+                  </li>
+                ))}
+              </ol>
+              <Button onClick={sendPassbook} className="mt-4 max-sm:w-full">อ่านสมุดบัญชี ({pages.length} หน้า)</Button>
+            </>
+          )}
+        </Card>
+      ) : (
       <label
         onDragOver={(e) => { e.preventDefault(); setDrag(true); }}
         onDragLeave={() => setDrag(false)}
@@ -102,6 +163,7 @@ export default function UploadPage() {
         <input type="file" accept="application/pdf,.pdf,image/jpeg,image/png,.jpg,.jpeg,.png" multiple className="sr-only"
           onChange={(e) => { addFiles(e.target.files); e.target.value = ""; }} />
       </label>
+      )}
 
       <p aria-live="polite" className="sr-only">{announce}</p>
 
@@ -111,7 +173,7 @@ export default function UploadPage() {
             <h2 id="slip-t" className="font-semibold">สลิป ({slips.length})</h2>
             <p className="text-sm text-muted">สลิปที่ตรงกับ statement จะไม่ถูกนับซ้ำ</p>
           </header>
-          {slipState.busy && <p role="status" className="animate-pulse px-5 py-3 text-sm text-muted motion-reduce:animate-none">⏳ กำลังอ่านสลิป…</p>}
+          {slipState.busy && <p role="status" className="flex items-center gap-1.5 animate-pulse px-5 py-3 text-sm text-muted motion-reduce:animate-none"><Loader2 aria-hidden size={14} className="animate-spin motion-reduce:animate-none" />กำลังอ่านสลิป…</p>}
           {slipState.error && <div className="p-4"><ErrorNote>{slipState.error}</ErrorNote></div>}
           <ul className="divide-y divide-line">
             {slips.map((x) => (
@@ -122,11 +184,11 @@ export default function UploadPage() {
                   {x.confidence < 0.9 && <p className="text-xs text-warning">อ่านได้ไม่ชัด ({Math.round(x.confidence * 100)}%) ตรวจยอดก่อนยืนยัน</p>}
                 </div>
                 {x.status === "matched" ? (
-                  <Badge kind="ok">✅ ตรงกับรายการใน statement (ไม่นับซ้ำ)</Badge>
+                  <Badge kind="ok"><CircleCheck aria-hidden size={14} /> ตรงกับรายการใน statement (ไม่นับซ้ำ)</Badge>
                 ) : x.confirmed ? (
-                  <Badge kind="manual">✋ เพิ่มแล้ว</Badge>
+                  <Badge kind="manual"><Hand aria-hidden size={14} /> เพิ่มแล้ว</Badge>
                 ) : (
-                  <Button variant="soft" onClick={() => confirmSlip(x.id)}>✋ ยืนยันเพื่อเพิ่มรายการ</Button>
+                  <Button variant="soft" onClick={() => confirmSlip(x.id)}><Hand aria-hidden size={16} /> ยืนยันเพื่อเพิ่มรายการ</Button>
                 )}
               </li>
             ))}
@@ -163,11 +225,11 @@ function UploadItem({ item, onRetry, onConfirmed, onUpdate }: {
   const [error, setError] = useState("");
   const r = item.result;
 
-  if (item.status === "uploading") return <Card aria-busy><p className="animate-pulse motion-reduce:animate-none">⏳ กำลังอ่าน {item.file.name}…</p></Card>;
+  if (item.status === "uploading") return <Card aria-busy><p className="flex items-center gap-1.5 animate-pulse motion-reduce:animate-none"><Loader2 aria-hidden size={16} className="shrink-0 animate-spin motion-reduce:animate-none" />กำลังอ่าน {nameOf(item)}…</p></Card>;
   if (item.status === "error") {
     return (
       <Card>
-        <p className="mb-3 font-semibold">{item.file.name}</p>
+        <p className="mb-3 font-semibold">{nameOf(item)}</p>
         <ErrorNote>{item.error}</ErrorNote>
       </Card>
     );
@@ -176,7 +238,7 @@ function UploadItem({ item, onRetry, onConfirmed, onUpdate }: {
     return (
       <Card>
         <form className="flex flex-col gap-3" onSubmit={(e) => { e.preventDefault(); onRetry(String(new FormData(e.currentTarget).get("password"))); }}>
-          <p className="flex items-center gap-2 font-semibold"><KeyRound aria-hidden size={20} /> {item.file.name} ถูกล็อก</p>
+          <p className="flex items-center gap-2 font-semibold"><KeyRound aria-hidden size={20} /> {nameOf(item)} ถูกล็อก</p>
           <Field label="รหัสผ่าน PDF" required hint="ส่วนใหญ่เป็นวันเกิด (เช่น DDMMYYYY) หรือเลขบัตรประชาชน — ดูในอีเมลจากธนาคาร">
             <input name="password" type="password" required autoComplete="off" />
           </Field>
@@ -189,7 +251,7 @@ function UploadItem({ item, onRetry, onConfirmed, onUpdate }: {
   }
   if (!r) return null;
   if (item.status === "done") {
-    return <Card><p className="font-semibold">✅ {item.file.name} — นำเข้า {item.imported} รายการแล้ว</p></Card>;
+    return <Card><p className="flex items-center gap-1.5 font-semibold"><CircleCheck aria-hidden size={16} className="shrink-0 text-success" />{nameOf(item)} — นำเข้า {item.imported} รายการแล้ว</p></Card>;
   }
 
   const failing = r.rows.filter((row) => !row.ok);
@@ -215,14 +277,14 @@ function UploadItem({ item, onRetry, onConfirmed, onUpdate }: {
       <header className="border-b border-line px-5 py-3">
         <h2 className="font-semibold">
           อ่าน <span className="num">{r.rows.length}</span> รายการ{" "}
-          <span className="text-success">✅ ยอดคงเหลือตรง <span className="num">{r.check.okCount}</span> แถว</span>{" "}
-          <span className={allOk ? "text-muted" : "text-warning"}>⚠️ ไม่ตรง <span className="num">{r.check.failCount}</span> แถว</span>
+          <span className="inline-flex items-center gap-1 text-success"><CircleCheck aria-hidden size={14} />ยอดคงเหลือตรง <span className="num">{r.check.okCount}</span> แถว</span>{" "}
+          <span className={cx("inline-flex items-center gap-1", allOk ? "text-muted" : "text-warning")}><TriangleAlert aria-hidden size={14} />ไม่ตรง <span className="num">{r.check.failCount}</span> แถว</span>
         </h2>
         <p className="mt-0.5 flex flex-wrap gap-x-2 text-sm text-muted">
           <span>{r.bank === "KBANK" ? "KBank" : "Bangkok Bank"}</span>
           <span>{r.accountNoMasked}</span>
           <span>{dateLabel(r.period.start)} – {dateLabel(r.period.end)}</span>
-          <span className="truncate">· {item.file.name}</span>
+          <span className="truncate">· {nameOf(item)}</span>
         </p>
       </header>
       {/* each row ticks as its balance check lands: ~30ms apart, whole strip capped near 1s */}
@@ -234,11 +296,11 @@ function UploadItem({ item, onRetry, onConfirmed, onUpdate }: {
             transition={{ duration: 0.18, ease: EASE, delay: i * Math.min(0.03, 1 / r.rows.length) }} />
         ))}
       </ol>
-      {!r.check.totalsOk && allOk && <p className="border-b border-line bg-warning-bg px-5 py-2 text-sm text-warning">⚠️ ยอดรวมยังไม่ตรงกับสรุปท้าย statement</p>}
+      {!r.check.totalsOk && allOk && <p className="flex items-center gap-1.5 border-b border-line bg-warning-bg px-5 py-2 text-sm text-warning"><TriangleAlert aria-hidden size={14} className="shrink-0" />ยอดรวมยังไม่ตรงกับสรุปท้าย statement</p>}
 
       {failing.length > 0 && (
         <div className="flex flex-col gap-3 border-b border-line p-5">
-          <p className="text-sm text-muted">แก้ตัวเลขให้ตรงกับ PDF แถวจะผ่านเมื่อ ยอดก่อนหน้า ± จำนวนเงิน = ยอดคงเหลือ</p>
+          <p className="text-sm text-muted">แก้ตัวเลขให้ตรงกับ PDF หรือสมุดบัญชี แถวจะผ่านเมื่อ ยอดก่อนหน้า ± จำนวนเงิน = ยอดคงเหลือ</p>
           {failing.map((row) => (
             <FailRow key={`${row.index}-${row.amount}-${row.direction}-${row.date}`} row={row}
               expected={expected.get(row.index)} uploadId={r.uploadId}
@@ -311,7 +373,7 @@ function FailRow({ row, expected, uploadId, onResult }: {
     setError("");
     try {
       const res = await api<{ rows: ReviewRow[]; check: UploadResult["check"] }>(`/uploads/${uploadId}/rows/${row.index}`, json("PATCH", body));
-      if (!res.rows.find((x) => x.index === row.index)?.ok) setError("ยังไม่ตรง ลองเทียบกับ PDF อีกครั้ง");
+      if (!res.rows.find((x) => x.index === row.index)?.ok) setError("ยังไม่ตรง ลองเทียบกับต้นฉบับอีกครั้ง");
       onResult(res.rows, res.check);
     } catch (err) {
       setError(errorText(err));
@@ -322,7 +384,7 @@ function FailRow({ row, expected, uploadId, onResult }: {
 
   return (
     <form onSubmit={recheck} className="rounded border border-warning/30 bg-warning-bg p-4" aria-labelledby={`${id}-t`}>
-      <p id={`${id}-t`} className="font-semibold"><Badge kind="warn">⚠️ ไม่ตรง</Badge> <span className="ml-1">แถว {row.index + 1}: {row.description}</span></p>
+      <p id={`${id}-t`} className="font-semibold"><Badge kind="warn"><TriangleAlert aria-hidden size={14} /> ไม่ตรง</Badge> <span className="ml-1">แถว {row.index + 1}: {row.description}</span></p>
       <p className="mt-1 text-sm text-muted">
         ยอดคงเหลือใน PDF <span className="num font-semibold text-text">{baht(row.balance)}</span>
         {expected !== undefined && <> แต่คำนวณได้ <span className="num font-semibold text-text">{baht(expected)}</span></>}
@@ -359,7 +421,7 @@ function Celebration({ streak, onClose }: { streak: number; onClose: () => void 
           initial={{ x: "0%" }} animate={{ x: "420%" }} transition={{ duration: 1.1, delay: 0.25, ease: [0.4, 0, 0.2, 1] }} />
         <p className="text-sm font-medium text-muted">Streak เพิ่มขึ้น</p>
         <h2 id="cel-t" className="mt-1 text-4xl font-semibold text-primary">
-          🔥 <Rolling value={streak} from={streak - 1} format={(v) => `${v}`} />/6 <span className="text-lg font-medium text-text">เดือน</span>
+          <Flame /> <Rolling value={streak} from={streak - 1} format={(v) => `${v}`} />/6 <span className="text-lg font-medium text-text">เดือน</span>
         </h2>
         <ol className="mt-4 grid grid-cols-6 gap-1" aria-hidden>
           {Array.from({ length: 6 }, (_, i) => (
@@ -371,7 +433,7 @@ function Celebration({ streak, onClose }: { streak: number; onClose: () => void 
             </li>
           ))}
         </ol>
-        <p className="mt-3 text-muted">{streak >= 6 ? "ครบแล้ว พร้อมยื่นกู้ ✅" : `อีก ${6 - streak} เดือนพร้อมยื่นกู้`}</p>
+        <p className="mt-3 text-muted">{streak >= 6 ? <span className="inline-flex items-center gap-1">ครบแล้ว พร้อมยื่นกู้ <CircleCheck aria-hidden size={16} className="text-success" /></span> : `อีก ${6 - streak} เดือนพร้อมยื่นกู้`}</p>
         <div className="mt-6 flex flex-wrap justify-center gap-3">
           <ButtonLink href="/dashboard">ไปหน้าหลัก</ButtonLink>
           <Button variant="soft" onClick={onClose} autoFocus>อัปโหลดต่อ</Button>

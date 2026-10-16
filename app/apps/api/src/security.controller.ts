@@ -1,4 +1,4 @@
-import { Body, Controller, Delete, Get, HttpCode, HttpException, NotFoundException, Param, Post, Req as NestReq, Res, UnauthorizedException, UseGuards } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Query, HttpCode, HttpException, NotFoundException, Param, Post, Req as NestReq, Res, UnauthorizedException, UseGuards } from '@nestjs/common';
 import type { FastifyReply } from 'fastify';
 import { unlink } from 'node:fs/promises';
 import * as argon2 from 'argon2';
@@ -7,7 +7,7 @@ import { PrismaService } from './prisma.service.js';
 import { AuditService } from './audit.service.js';
 import { AuthGuard, loginFailed, loginLimited, UserId, type Req } from './auth.js';
 import { decryptStr, envKey, sha256 } from './crypto.js';
-import { parse } from './validation.js';
+import { paging, parse } from './validation.js';
 
 @Controller('security')
 @UseGuards(AuthGuard)
@@ -15,14 +15,19 @@ export class SecurityController {
   constructor(private prisma: PrismaService, private audit: AuditService) {}
 
   @Get('logins')
-  async logins(@UserId() userId: string, @NestReq() req: Req) {
-    const rows = await this.prisma.loginEvent.findMany({ where: { userId }, orderBy: { at: 'desc' }, take: 100 });
+  async logins(@UserId() userId: string, @NestReq() req: Req, @Query() q: unknown) {
+    const where = { userId };
+    const [rows, total] = await Promise.all([
+      this.prisma.loginEvent.findMany({ where, orderBy: { at: 'desc' }, ...paging(q, 100, 100) }),
+      this.prisma.loginEvent.count({ where }),
+    ]);
     const key = envKey('PII_KEY');
     return {
       logins: rows.map((e) => ({
         at: e.at, success: e.success, ip: e.ipEnc ? decryptStr(e.ipEnc, key) : null, device: e.device, location: e.location,
         current: !!e.sessionId && e.sessionId === req.sessionId,
       })),
+      total,
     };
   }
 

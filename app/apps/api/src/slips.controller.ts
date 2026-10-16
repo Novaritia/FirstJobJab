@@ -13,7 +13,7 @@ import type { Slip } from './generated/prisma/client.js';
 
 const MAX_SLIP_BYTES = 10 * 1024 * 1024;
 const MAX_SLIPS = 10;
-const mimeOf = (b: Buffer) =>
+export const mimeOf = (b: Buffer) =>
   b.subarray(0, 8).equals(Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a])) ? 'image/png'
   : b[0] === 0xff && b[1] === 0xd8 && b[2] === 0xff ? 'image/jpeg' : null;
 const minutes = (t: string) => +t.slice(0, 2) * 60 + +t.slice(3, 5);
@@ -55,7 +55,7 @@ export class SlipsController {
       const hash = sha256(img);
       const same = await this.prisma.slip.findUnique({ where: { userId_sha256: { userId, sha256: hash } } });
       if (same) { slips.push(view(same)); continue; }
-      const r = await readSlip(img, mimeOf(img)!);
+      const r = await readSlip(img);
       // same transfer re-screenshotted: QR ref identifies it exactly
       const dup = r.qrRef ? await this.prisma.slip.findFirst({ where: { userId, qrRef: r.qrRef } }) : null;
       if (dup) { slips.push(view(dup, r.fromName)); continue; }

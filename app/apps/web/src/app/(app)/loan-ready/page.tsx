@@ -1,6 +1,7 @@
 "use client";
+import { CircleCheck, Hand } from "lucide-react";
 import type { LoanReady } from "@/lib/api";
-import { Money, Stagger } from "@/components/motion";
+import { Flame, Money, Stagger } from "@/components/motion";
 import { ButtonLink, Card, ErrorNote, Loading, PageTitle, useApi } from "@/components/ui";
 
 export default function LoanReadyPage() {
@@ -16,8 +17,8 @@ export default function LoanReadyPage() {
       <PageTitle title="พร้อมยื่นกู้แค่ไหน" sub="ธนาคารมักขอ statement ต่อเนื่อง 6 เดือน" />
       <div className="grid gap-5 md:grid-cols-2">
         <Card className="md:col-span-2">
-          <h2 className="text-xl font-bold">
-            🔥 {d.continuousMonths}/{d.required} เดือนต่อเนื่อง {ready ? "→ พร้อมยื่นกู้แล้ว ✅" : `→ อีก ${left} เดือน`}
+          <h2 className="flex flex-wrap items-center gap-x-1.5 text-xl font-bold">
+            <Flame /> {d.continuousMonths}/{d.required} เดือนต่อเนื่อง {ready ? <>→ พร้อมยื่นกู้แล้ว <CircleCheck aria-hidden size={20} className="text-success" /></> : `→ อีก ${left} เดือน`}
           </h2>
           <ol className="mt-4 grid grid-cols-6 gap-2" aria-label={`ส่งแล้ว ${d.continuousMonths} จาก ${d.required} เดือน`}>
             {Array.from({ length: d.required }, (_, i) => (
@@ -42,7 +43,7 @@ export default function LoanReadyPage() {
           <p className="mt-3 text-sm text-muted">ใช้หลักทั่วไป: ภาระหนี้ทั้งหมดไม่ควรเกิน ~40% ของรายได้ ธนาคารแต่ละแห่งพิจารณาต่างกัน</p>
         </section>
       </div>
-      <p className="mt-5 text-sm text-muted">นับเฉพาะข้อมูลจาก statement ต้นฉบับ รายการที่ ✋ เพิ่มเองไม่ถูกนับ</p>
+      <p className="mt-5 text-sm text-muted">นับเฉพาะข้อมูลจาก statement ต้นฉบับ รายการที่<Hand aria-hidden size={14} className="mx-1 inline align-[-2px]" />เพิ่มเองไม่ถูกนับ</p>
     </Stagger>
   );
 }

@@ -48,8 +48,15 @@ model Session {
 model Pii {
   userId        String   @id
   user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  birthDateEnc  String
-  nationalIdEnc String
+  birthDateEnc  String?
+  /// optional: without it only statements can be exported (no prefilled tax pack)
+  nationalIdEnc String?
+  /// Thai full legal name (tax forms)
+  fullNameEnc   String?
+  /// normalised Thai mobile 0XXXXXXXXX
+  phoneEnc      String?
+  /// satang per month, user-declared (not secret enough to encrypt)
+  monthlySalary Int?
   updatedAt     DateTime @updatedAt
 
   @@map("pii")

@@ -34,7 +34,7 @@ describe('readSlip (real OCR on mock)', () => {
     ['slip_scb_food_2026-09-12.png', { amount: 35000, date: '2026-09-12', time: '14:30', qrRef: '202609121430SCB00017', bank: 'SCB' }],
     ['slip_scb_aircon_2026-09-20.png', { amount: 125000, date: '2026-09-20', time: '16:45', qrRef: '202609201645SCB00342', bank: 'SCB' }],
   ])('reads %s', async (file, want) => {
-    const r = await readSlip(readFileSync(join(SLIPS, file)), 'image/png');
+    const r = await readSlip(readFileSync(join(SLIPS, file)));
     expect(r).toMatchObject(want);
     expect(r.confidence).toBeGreaterThan(0.7);
   }, 60_000);
