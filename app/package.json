@@ -1,0 +1,11 @@
+{
+  "name": "fjm",
+  "private": true,
+  "scripts": {
+    "dev:web": "pnpm --filter web dev",
+    "dev:api": "pnpm --filter api start:dev",
+    "test": "pnpm -r test",
+    "db:up": "docker compose up -d db"
+  },
+  "packageManager": "pnpm@11.20.0"
+}

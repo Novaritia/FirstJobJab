@@ -1,0 +1,36 @@
+{
+  "name": "สมหญิง ใจดี",
+  "nameTitled": "นางสาวสมหญิง ใจดี",
+  "birthDate": "1999-03-14",
+  "nationalId": "1103700123458",
+  "password": "14031999",
+  "grossSalary": 28000,
+  "socialSecurityPerMonth": 750,
+  "netSalaryDeposit": 27250,
+  "employer": "บจก. ไทยดิจิทัล โซลูชั่น",
+  "accounts": {
+    "KBANK": {
+      "masked": "xxx-x-x4821-x",
+      "type": "ออมทรัพย์ / Savings",
+      "branch": "สาขาเซ็นทรัล ลาดพร้าว"
+    },
+    "BBL": {
+      "masked": "xxx-x-x7305-x",
+      "type": "ออมทรัพย์ / Savings",
+      "branch": "สาขาสีลม"
+    }
+  },
+  "months": [
+    "2026-04",
+    "2026-05",
+    "2026-06",
+    "2026-07",
+    "2026-08",
+    "2026-09"
+  ],
+  "brokenFile": {
+    "file": "BROKEN_KBANK_2026-06.pdf",
+    "rowIndex": 7,
+    "note": "printed balance +100.00 on row 8; rows 8 and 9 fail the check"
+  }
+}
