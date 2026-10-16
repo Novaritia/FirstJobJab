@@ -1,3 +1,6 @@
+# explicit project name: the folder is "app", which another project on the server already uses
+name: firstjobjab
+
 services:
   db:
     image: postgres:17
@@ -68,4 +71,4 @@ networks:
 volumes:
   # created by compose on first `up`; careful: `docker compose down -v` deletes the database
   dbdata:
-    name: app_dbdata
+    name: firstjobjab_dbdata
