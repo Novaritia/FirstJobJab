@@ -105,6 +105,9 @@ model Upload {
   rowCount        Int
   createdAt       DateTime  @default(now())
   confirmedAt     DateTime?
+  /// original file name as sent by the browser (display only)
+  fileName        String?
+  ocr             Boolean   @default(false)
   transactions    Transaction[]
 
   @@index([userId, sha256])

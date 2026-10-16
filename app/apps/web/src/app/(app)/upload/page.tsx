@@ -4,8 +4,9 @@ import { BookOpen, Camera, CircleCheck, FileUp, Hand, ImagePlus, KeyRound, Loade
 import { motion } from "motion/react";
 import { EASE, Flame, Rolling } from "@/components/motion";
 import { FireDeadline } from "@/components/StreakTrack";
+import { UploadHistory } from "@/components/UploadHistory";
 import { BANK_NAMES, type Direction } from "@fjm/shared";
-import { ApiError, api, errorText, json, type ReviewRow, type Slip, type Streak, type UploadResult } from "@/lib/api";
+import { ApiError, api, dataChanged, errorText, json, type ReviewRow, type Slip, type Streak, type UploadResult } from "@/lib/api";
 import { baht, dateLabel, toSatang } from "@/lib/format";
 import { Badge, Button, ButtonLink, Card, ErrorNote, Field, PageTitle, RequiredLegend, cx } from "@/components/ui";
 
@@ -43,6 +44,7 @@ export default function UploadPage() {
     try {
       const result = await api<UploadResult>(item.pages ? "/uploads/passbook" : "/uploads", { method: "POST", body: form });
       patch(item.key, { status: "review", result });
+      dataChanged();
       setAnnounce(`${nameOf(item)}: อ่าน ${result.rows.length} รายการ ตรง ${result.check.okCount} ไม่ตรง ${result.check.failCount}`);
     } catch (e) {
       if (e instanceof ApiError && e.message === "password_required") {
@@ -73,6 +75,7 @@ export default function UploadPage() {
     try {
       const res = await api<{ streak?: Streak }>(`/slips/${id}/confirm`, json("POST"));
       setSlips((xs) => xs.map((x) => (x.id === id ? { ...x, confirmed: true } : x)));
+      dataChanged();
       if (res.streak?.gained) setCelebrate(res.streak);
       setAnnounce("เพิ่มรายการจากสลิปแล้ว");
     } catch (e) {
@@ -204,6 +207,7 @@ export default function UploadPage() {
             <UploadItem item={it} onRetry={(pw) => send(it, pw)}
               onConfirmed={(imported, streak) => {
                 patch(it.key, { status: "done", imported });
+                dataChanged(); // navbar 🔥 + history refetch now
                 if (streak?.gained) setCelebrate(streak); // re-import of known rows: no +1
                 setAnnounce(`ยืนยันแล้ว นำเข้า ${imported} รายการ`);
               }}
@@ -211,6 +215,13 @@ export default function UploadPage() {
           </li>
         ))}
       </ul>
+
+      <div className="mt-10">
+        <UploadHistory onResume={(result, name) => {
+          setItems((xs) => [{ key: `${seq.current++}`, file: new File([], name), status: "review", result }, ...xs.filter((x) => x.result?.uploadId !== result.uploadId)]);
+          window.scrollTo({ top: 0, behavior: "smooth" });
+        }} />
+      </div>
 
       {celebrate !== null && <Celebration streak={celebrate} onClose={() => setCelebrate(null)} />}
     </div>

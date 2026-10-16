@@ -40,3 +40,19 @@ export const CATEGORY_LABEL: Record<Category, string> = {
   own_transfer: "โอนระหว่างบัญชีตัวเอง",
   other: "อื่น ๆ",
 };
+
+/** Day/month/CE-year as typed → ISO date, or a Thai error. Empty → { iso: "" }. */
+export function parseBirthDate(d: string, m: string, y: string, today: Date): { iso: string; error?: string } {
+  if (!d && !m && !y) return { iso: "" };
+  if (!d || !m || !y) return { iso: "", error: "กรอกวัน เดือน ปี ให้ครบ" };
+  const [dn, mn, yn] = [Number(d), Number(m), Number(y)];
+  if (yn >= 2400) return { iso: "", error: "กรุณากรอกปี ค.ศ. (เช่น 1999 ไม่ใช่ 2542)" };
+  if (y.length !== 4) return { iso: "", error: "ปีต้องเป็นตัวเลข 4 หลัก (ค.ศ.)" };
+  if (mn < 1 || mn > 12) return { iso: "", error: "เดือนต้องอยู่ระหว่าง 1–12" };
+  const last = new Date(Date.UTC(yn, mn, 0)).getUTCDate();
+  if (dn < 1 || dn > last) return { iso: "", error: `เดือนนี้มีแค่ ${last} วัน` };
+  const iso = `${y}-${String(mn).padStart(2, "0")}-${String(dn).padStart(2, "0")}`;
+  const t = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`;
+  if (iso > t) return { iso: "", error: "วันเกิดอยู่ในอนาคต ตรวจอีกครั้ง" };
+  return { iso };
+}

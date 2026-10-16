@@ -1,11 +1,11 @@
 import {
-  Controller, Get, HttpException, NotFoundException, Param, Patch, Post, Body, Req as NestReq, UseGuards, HttpCode,
+  Controller, Delete, Get, HttpException, NotFoundException, Param, Patch, Post, Body, Query, Req as NestReq, UseGuards, HttpCode,
 } from '@nestjs/common';
-import { mkdir, writeFile } from 'node:fs/promises';
+import { mkdir, unlink, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { z } from 'zod';
 import {
-  BANKS, checkBalances, parsePassbook, parseStatement, pdfItemsToLines, pdfPasswordCandidates,
+  BANKS, WALLETS, checkBalances, parsePassbook, parseStatement, pdfItemsToLines, pdfPasswordCandidates,
   type BalanceCheckResult, type Bank, type Category, type ParsedStatement,
 } from '@fjm/shared';
 import { PrismaService } from './prisma.service.js';
@@ -37,24 +37,97 @@ const RowFix = z.object({
   balance: z.number().int().min(-1e12).max(1e12).optional(), // misread printed balance
 });
 
+const Paging = z.object({ limit: z.coerce.number().int().min(1).max(100).default(20), page: z.coerce.number().int().min(1).default(1) });
+const DeleteBody = z.object({ confirm: z.literal(true, { error: 'confirm_required' }) });
+
+export const uploadKind = (u: { bank: string; filePath: string }) =>
+  (WALLETS as readonly string[]).includes(u.bank) ? 'wallet' : u.filePath.endsWith('.passbook.enc') ? 'passbook' : 'statement';
+const unlinkQuiet = (p: string) => (p ? unlink(p).catch(() => undefined) : Promise.resolve()); // already gone is fine
+
+/**
+ * Delete a confirmed import's rows (edits cascade) in one tx. Slips pointing at those rows go back:
+ * a slip that was merged (its own row hidden) gets its row unhidden + relinked; a slip matched at upload becomes unmatched.
+ */
+export async function deleteImport(prisma: PrismaService, userId: string, uploadId: string): Promise<number> {
+  return prisma.$transaction(async (tx) => {
+    const ids = (await tx.transaction.findMany({ where: { userId, uploadId }, select: { id: true } })).map((t) => t.id);
+    const merges = (await tx.auditLog.findMany({ where: { userId, action: 'slip_merged' }, select: { target: true, after: true } }))
+      .map((a) => ({ slipTxId: a.target!, stmtTxId: (a.after as { statementTransactionId?: string } | null)?.statementTransactionId }))
+      .filter((m) => m.stmtTxId && ids.includes(m.stmtTxId));
+    for (const m of merges) {
+      const t = await tx.transaction.findFirst({ where: { id: m.slipTxId, userId } });
+      if (!t) continue;
+      const lastNote = await tx.edit.findFirst({ where: { transactionId: t.id, field: 'note', newValue: SLIP_MERGED_NOTE }, orderBy: { at: 'desc' } });
+      const note = t.note === SLIP_MERGED_NOTE ? lastNote?.oldValue ?? null : t.note;
+      await tx.transaction.update({ where: { id: t.id }, data: { hidden: false, note } });
+      await tx.edit.createMany({ data: [
+        { userId, transactionId: t.id, field: 'hidden', oldValue: String(t.hidden), newValue: 'false' },
+        ...(note !== t.note ? [{ userId, transactionId: t.id, field: 'note', oldValue: t.note, newValue: note }] : []),
+      ] });
+      await tx.slip.updateMany({ where: { userId, matchedTransactionId: m.stmtTxId }, data: { matchedTransactionId: t.id } });
+    }
+    await tx.slip.updateMany({ where: { userId, matchedTransactionId: { in: ids }, status: 'matched' }, data: { matchedTransactionId: null, status: 'unmatched' } });
+    const { count } = await tx.transaction.deleteMany({ where: { userId, uploadId } });
+    await tx.upload.delete({ where: { id: uploadId } });
+    return count;
+  });
+}
+
 @Controller('uploads')
 @UseGuards(AuthGuard)
 export class UploadsController {
   constructor(private prisma: PrismaService, private audit: AuditService, private stats: StatsService) {}
 
   @Get()
-  async list(@UserId() userId: string) {
-    const ups = await this.prisma.upload.findMany({ where: { userId }, orderBy: { createdAt: 'desc' } });
-    return { uploads: ups.map(({ id, bank, periodStart, periodEnd, status, rowCount, createdAt }) => ({ id, bank, periodStart, periodEnd, status, rowCount, createdAt })) };
+  async list(@UserId() userId: string, @Query() q: unknown) {
+    const { limit, page } = parse(Paging, q);
+    const [total, ups] = await Promise.all([
+      this.prisma.upload.count({ where: { userId } }),
+      this.prisma.upload.findMany({ where: { userId }, orderBy: { createdAt: 'desc' }, take: limit, skip: (page - 1) * limit }),
+    ]);
+    const counts = await this.prisma.transaction.groupBy({ by: ['uploadId'], where: { userId, uploadId: { in: ups.map((u) => u.id) } }, _count: true });
+    return {
+      total, page, limit,
+      uploads: ups.map((u) => {
+        const c = checkBalances((u.parsed as unknown as Parsed).statement);
+        return {
+          id: u.id, kind: uploadKind(u), fileName: u.fileName, bank: u.bank, periodStart: u.periodStart, periodEnd: u.periodEnd, status: u.status,
+          rowCount: u.rowCount, importedRows: counts.find((x) => x.uploadId === u.id)?._count ?? 0, createdAt: u.createdAt, confirmedAt: u.confirmedAt,
+          ocr: u.ocr, check: { okCount: c.okCount, failCount: c.failCount, mode: c.mode },
+        };
+      }),
+    };
+  }
+
+  /** Pending -> cancel. Confirmed -> only with ?withTransactions=1 + {confirm:true}: removes its rows and restores merged slips. */
+  @Delete(':id')
+  async remove(@UserId() userId: string, @Param('id') id: string, @Query('withTransactions') withTx: string | undefined, @Body() body: unknown, @NestReq() req: Req) {
+    const up = await this.prisma.upload.findFirst({ where: { id, userId } });
+    if (!up) throw new NotFoundException('not_found');
+    if (up.status === 'pending') {
+      await this.prisma.upload.delete({ where: { id } });
+      await unlinkQuiet(up.filePath);
+      await this.audit.log(req, 'upload_cancel', { target: id });
+      return { ok: true, deletedRows: 0 };
+    }
+    if (withTx !== '1') throw new HttpException('has_transactions', 409);
+    parse(DeleteBody, body ?? {});
+    const deletedRows = await deleteImport(this.prisma, userId, id);
+    await unlinkQuiet(up.filePath);
+    // fire already earned stays (audit-derived, append-only): the update did happen; coverage/loan-ready recompute from what is left
+    await this.audit.log(req, 'upload_delete', { target: id, after: { rows: deletedRows } });
+    return { ok: true, deletedRows };
   }
 
   @Post()
   async upload(@UserId() userId: string, @NestReq() req: Req) {
     let file: Buffer | undefined;
+    let fileName: string | undefined;
     let password: string | undefined;
     for await (const part of req.parts({ limits: { fileSize: MAX_PDF_BYTES, files: 1 } })) {
       if (part.type === 'file') {
         if (part.fieldname !== 'file') { part.file.resume(); continue; }
+        fileName = part.filename?.slice(0, 200) || undefined;
         file = await part.toBuffer(); // throws 413 when over fileSize
       } else if (part.fieldname === 'password' && typeof part.value === 'string' && part.value) {
         password = part.value;
@@ -83,7 +156,7 @@ export class UploadsController {
     } catch {
       throw new HttpException('unsupported_format', 422);
     }
-    return this.store(userId, req, statement, hash, file, 'pdf', { ocr });
+    return this.store(userId, req, statement, hash, file, 'pdf', { ocr }, fileName);
   }
 
   /** Passbook page photos (multipart repeated `images`, in page order; optional `bank` KBANK|BBL for pages without a logo) → same review payload as a PDF. */
@@ -112,11 +185,11 @@ export class UploadsController {
     }
     // one encrypted blob (u32 length + bytes per page) so account deletion's single unlink still works
     const blob = Buffer.concat(pages.flatMap((p) => { const n = Buffer.alloc(4); n.writeUInt32BE(p.length); return [n, p]; }));
-    return this.store(userId, req, statement, hash, blob, 'passbook', { ocr: true, pages: pages.length });
+    return this.store(userId, req, statement, hash, blob, 'passbook', { ocr: true, pages: pages.length }, `สมุดบัญชี ${pages.length} หน้า`);
   }
 
   /** Categorise, check, persist as a pending upload with the encrypted source file, audit; returns the review payload. */
-  private async store(userId: string, req: Req, statement: ParsedStatement, hash: string, file: Buffer, ext: string, meta: { ocr: boolean; pages?: number }) {
+  private async store(userId: string, req: Req, statement: ParsedStatement, hash: string, file: Buffer, ext: string, meta: { ocr: boolean; pages?: number }, fileName?: string) {
     const rules = await this.prisma.categoryRule.findMany({ where: { userId } });
     const parsed: Parsed = { statement, categories: statement.rows.map((r) => categorize(r.description, r.direction, rules)) };
     const check = checkBalances(statement);
@@ -124,7 +197,7 @@ export class UploadsController {
     const upload = await this.prisma.upload.create({
       data: {
         userId, bank: statement.bank, accountNoMasked: statement.accountNoMasked, periodStart: statement.periodStart,
-        periodEnd: statement.periodEnd, sha256: hash, filePath: '', parsed: parsed as object, rowCount: statement.rows.length,
+        periodEnd: statement.periodEnd, sha256: hash, filePath: '', parsed: parsed as object, rowCount: statement.rows.length, fileName, ocr: meta.ocr,
       },
     });
     await mkdir(UPLOAD_DIR, { recursive: true });
@@ -168,6 +241,17 @@ export class UploadsController {
     if (!up) throw new NotFoundException('not_found');
     if (up.status !== 'pending') throw new HttpException('already_confirmed', 409);
     return { up, parsed: up.parsed as unknown as Parsed };
+  }
+
+  /** Reopen a pending upload's review (same shape as POST /uploads). */
+  @Get(':id')
+  async review(@UserId() userId: string, @Param('id') id: string) {
+    const { up, parsed } = await this.pending(userId, id);
+    const s = parsed.statement, check = checkBalances(s);
+    return {
+      uploadId: up.id, bank: s.bank, period: { start: s.periodStart, end: s.periodEnd },
+      accountNoMasked: s.accountNoMasked, rows: reviewRows(parsed, check), check, ocr: up.ocr,
+    };
   }
 
   @Patch(':id/rows/:index')

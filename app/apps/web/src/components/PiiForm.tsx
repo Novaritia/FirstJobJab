@@ -4,6 +4,7 @@ import { CircleAlert, CircleCheck, LockKeyhole } from "lucide-react";
 import { toast } from "sonner";
 import { isThaiNationalId, normalizeThaiPhone } from "@fjm/shared";
 import { ApiError, api, errorText, json, type Profile } from "@/lib/api";
+import { parseBirthDate } from "@/lib/format";
 import { Input } from "@/components/shadcn/input";
 import { Button, ErrorNote, Field, RequiredLegend } from "./ui";
 
@@ -16,39 +17,35 @@ export const fmtThaiId = (s: string) => [[0, 1], [1, 5], [5, 10], [10, 12], [12,
 /** 081-234-5678 */
 export const fmtPhone = (s: string) => [s.slice(0, 3), s.slice(3, 6), s.slice(6)].filter(Boolean).join("-");
 
-const MONTHS = ["ม.ค.", "ก.พ.", "มี.ค.", "เม.ย.", "พ.ค.", "มิ.ย.", "ก.ค.", "ส.ค.", "ก.ย.", "ต.ค.", "พ.ย.", "ธ.ค."];
-const THIS_YEAR = new Date().getFullYear();
-
-/** Day / Thai month / พ.ศ. year selects → `YYYY-MM-DD` (ค.ศ.) or "" until complete. Renders a hidden input for FormData. */
-export function ThaiDateInput({ name, value, onChange, required, id }: { name?: string; value: string; onChange: (iso: string) => void; required?: boolean; id?: string }) {
-  const [parts, setParts] = useState(() => value.split("-"));
+/** Birth date as typed: day / month / ค.ศ. year, no pickers or year limits → `YYYY-MM-DD`, or "" while incomplete/invalid. */
+export function ThaiDateInput({ name, value, onChange, required, id }: { name?: string; value: string; onChange: (iso: string, error?: string) => void; required?: boolean; id?: string }) {
+  const split = (v: string) => { const [y = "", m = "", d = ""] = v ? v.split("-") : []; return { d: d.replace(/^0/, ""), m: m.replace(/^0/, ""), y }; };
+  const [parts, setParts] = useState(() => split(value));
   const [seen, setSeen] = useState(value);
-  if (value !== seen) { setSeen(value); if (value) setParts(value.split("-")); } // external reset (adjust-during-render, no effect)
-  const [y = "", m = "", d = ""] = parts;
-  function set(i: number, v: string) {
-    const next = [y, m, d];
-    next[i] = v;
+  const [err, setErr] = useState("");
+  if (value !== seen) { setSeen(value); if (value) setParts(split(value)); } // external reset (adjust-during-render, no effect)
+  function set(k: "d" | "m" | "y", v: string) {
+    const next = { ...parts, [k]: v.replace(/\D/g, "").slice(0, k === "y" ? 4 : 2) };
     setParts(next);
-    const [ny, nm, nd] = next;
-    const iso = ny && nm && nd ? `${ny}-${nm}-${nd}` : "";
-    onChange(iso && !Number.isNaN(Date.parse(iso)) && new Date(iso).getUTCDate() === Number(nd) ? iso : "");
+    const r = parseBirthDate(next.d, next.m, next.y, new Date());
+    // only complain once the year is fully typed, so the user isn't nagged mid-entry
+    setErr(next.y.length >= 4 || (next.d && next.m && next.y) ? r.error ?? "" : "");
+    setSeen(r.iso);
+    onChange(r.iso, r.error);
   }
-  const pad = (n: number) => String(n).padStart(2, "0");
+  const box = "num text-center";
   return (
-    <div className="grid grid-cols-[4.5rem_1fr_6rem] gap-2">
+    <div className="flex flex-col gap-1">
       {name && <input type="hidden" name={name} value={value} />}
-      <select id={id} aria-label="วัน" required={required} value={d} onChange={(e) => set(2, e.target.value)}>
-        <option value="">วัน</option>
-        {Array.from({ length: 31 }, (_, i) => <option key={i} value={pad(i + 1)}>{i + 1}</option>)}
-      </select>
-      <select aria-label="เดือน" required={required} value={m} onChange={(e) => set(1, e.target.value)}>
-        <option value="">เดือน</option>
-        {MONTHS.map((t, i) => <option key={t} value={pad(i + 1)}>{t}</option>)}
-      </select>
-      <select aria-label="ปี พ.ศ." required={required} value={y} onChange={(e) => set(0, e.target.value)}>
-        <option value="">ปี พ.ศ.</option>
-        {Array.from({ length: 80 }, (_, i) => THIS_YEAR - 15 - i).map((ce) => <option key={ce} value={String(ce)}>{ce + 543}</option>)}
-      </select>
+      <div className="grid grid-cols-[4rem_auto_4rem_auto_5.5rem] items-center gap-1.5" role="group" aria-label="วันเกิด (ค.ศ.)">
+        <input id={id} aria-label="วัน" inputMode="numeric" placeholder="14" required={required} value={parts.d} onChange={(e) => set("d", e.target.value)} className={box} aria-invalid={!!err} />
+        <span aria-hidden className="text-muted">/</span>
+        <input aria-label="เดือน (ตัวเลข)" inputMode="numeric" placeholder="03" required={required} value={parts.m} onChange={(e) => set("m", e.target.value)} className={box} aria-invalid={!!err} />
+        <span aria-hidden className="text-muted">/</span>
+        <input aria-label="ปี ค.ศ." inputMode="numeric" placeholder="1999" required={required} value={parts.y} onChange={(e) => set("y", e.target.value)} className={box} aria-invalid={!!err} />
+      </div>
+      <span className="text-xs text-muted">วัน / เดือน / ปี ค.ศ. เช่น 14 / 03 / 1999</span>
+      {err && <span role="alert" className="text-sm font-medium text-danger">{err}</span>}
     </div>
   );
 }
@@ -62,7 +59,7 @@ export function PiiForm({ onDone, onSkip, submitLabel = "บันทึก", sk
     e.preventDefault();
     const f = new FormData(e.currentTarget);
     const nationalId = String(f.get("nationalId")).replace(/\D/g, "");
-    if (!birthDate) return setError("เลือกวันเกิดให้ครบ วัน เดือน ปี");
+    if (!birthDate) return setError("กรอกวันเกิดให้ถูกต้อง (วัน / เดือน / ปี ค.ศ.)");
     if (!validThaiId(nationalId)) return setError("เลขบัตรประชาชนไม่ถูกต้อง (13 หลัก)");
     setBusy(true);
     setError("");
@@ -123,10 +120,12 @@ export function ProfileForm({ profile, onSaved }: { profile: Profile; onSaved: (
   const [touched, setTouched] = useState<Record<string, boolean>>({});
   const [serverErr, setServerErr] = useState<Record<string, string>>({});
   const [busy, setBusy] = useState(false);
+  const [birthErr, setBirthErr] = useState("");
   const set = (k: keyof typeof v) => (x: string) => { setV((o) => ({ ...o, [k]: x })); setServerErr((e) => ({ ...e, [k === "salary" ? "monthlySalary" : k]: "" })); };
   const blur = (k: string) => () => setTouched((t) => ({ ...t, [k]: true }));
 
   const err: Record<string, string> = {
+    birthDate: birthErr,
     displayName: v.displayName.trim() ? "" : FIELD_ERR.required,
     fullName: v.fullName.trim() && v.fullName.trim().length < 2 ? FIELD_ERR.too_short : "",
     phone: v.phone && !normalizeThaiPhone(v.phone) ? FIELD_ERR.invalid_phone : "",
@@ -183,7 +182,7 @@ export function ProfileForm({ profile, onSaved }: { profile: Profile; onSaved: (
         <Input value={profile.email} readOnly aria-readonly className="h-11 bg-subtle text-muted lg:h-10" />
       </Field>
       <Field label="วันเกิด" hint="ใช้ปลดล็อกไฟล์ statement และคำนวณภาษี">
-        <ThaiDateInput value={v.birthDate} onChange={set("birthDate")} />
+        <ThaiDateInput value={v.birthDate} onChange={(iso, e) => { set("birthDate")(iso); setBirthErr(e ?? ""); }} />
         {msg("birthDate")}
       </Field>
       <Field label="เงินเดือน (ต่อเดือน)" hint={!show("salary") && "ไม่บังคับ ใช้ประมาณภาษีก่อนมี statement"}>

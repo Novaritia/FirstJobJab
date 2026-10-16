@@ -9,7 +9,7 @@ import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 import type { ComponentProps, ReactNode } from "react";
 import { CircleAlert, Loader2 } from "lucide-react";
-import { ApiError, api, errorText } from "@/lib/api";
+import { ApiError, DATA_CHANGED, api, errorText } from "@/lib/api";
 import { cn } from "@/lib/utils";
 import { buttonVariants } from "@/components/shadcn/button";
 import { Badge as UiBadge } from "@/components/shadcn/badge";
@@ -156,7 +156,11 @@ export function useApi<T>(path: string | null) {
       (e) => setState({ error: errorText(e), status: e instanceof ApiError ? e.status : 0, loading: false }),
     );
   }, [path]);
-  useEffect(reload, [reload]);
+  useEffect(() => {
+    reload();
+    window.addEventListener(DATA_CHANGED, reload);
+    return () => window.removeEventListener(DATA_CHANGED, reload);
+  }, [reload]);
   return { ...state, reload, setData: (data: T) => setState({ data, loading: false }) };
 }
 

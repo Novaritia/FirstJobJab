@@ -1,4 +1,5 @@
 # FirstJobJab — Handoff (keep updated)
+> **Picking up? Read `NEXT.md` first — current to-do list (12:04).**
 
 > Read this first if you're a new Claude session picking up the work.
 > Submit U-Hackathon by **2026-10-16 14:00 ICT** (public GitHub repo + demo website + pitch deck link).
@@ -34,6 +35,7 @@ Spec: `../01-brainstorm/idea-first-jobber-money.md` · Tech plan: `../03-tech/te
 | Universal import (any Thai bank + e-wallets, 11:30) | ✅ `Bank` = 15 banks + TRUEMONEY/SHOPEEPAY/LINEPAY/PAOTANG + OTHER; `detectBank` never null; KBANK/BBL layout parser then layout-free `parseGenericStatement` (better-verifying one wins); no-balance wallet rows → `check.mode` totals/none, confirm needs `acceptUnverified` (rows verified=false); web review shows ✋ + bulk confirm. Mocks SCB/KTB/TRUEMONEY_2026-09.pdf + wallet/truemoney_history PNG all parse (live :4000 run ok, test uploads deleted). Real KBank sample not yet received (app/real-samples/ empty) |
 | Assistant chat + voice (ElevenLabs STT/TTS) | 🔄 api agent: POST /chat, /chat/voice; web agent: /assistant page after redesign |
 | 🔥 streak v2 (11:50): +1 per update with new data, no max, out after 30 days w/o update (from audit_log); x/6 months kept as loan-ready `coverage`. API + web (dashboard hero, badge, +1 celebration, landing/onboarding copy, chat) | ✅ api 44 unit + 2 e2e, web tsc/lint/build; curl ok. demo-preload now gives 🔥10 |
+| Upload log + management (api, 12:05): GET /uploads paging + kind/fileName/importedRows/ocr/check; DELETE /uploads/:id cancel (pending) / delete import with rows `?withTransactions=1` + `{confirm:true}` (slips restored). New cols uploads.fileName/ocr | ✅ api 44 unit + 4 e2e; curl ok on :4000. Web UI not built (web agent) |
 | Pitch deck / demo script | ❌ not started (`../05-pitch/` has old outlines for a dropped idea) |
 | Git commit / push | ✅ f14f320 pushed to main (app/ + 2 new docs). Older uncommitted docs from earlier sessions left untouched |
 
@@ -83,3 +85,4 @@ Local DB in use: **`fjm_demo`** (`.env` DATABASE_URL). Old `fjm` DB has test jun
 - (11:30) IN PROGRESS (OCR agent): universal parser for every Thai bank + e-wallets (TrueMoney, ShopeePay, LINE Pay, Paotang). Real KBank upload failed on old mock-based parser. Wallet rows without balance: verify by totals if printed, else ✋ unverified + explicit bulk confirm. Real files go in app/real-samples/ (gitignored, never committed).
 - (11:45) Perf: API listens on "::" (dual-stack) — IPv4-only cost ~200ms/request via localhost on Windows. For demo run web in production: `pnpm --filter web build && pnpm --filter web start` (dev mode compiles pages on first visit, 0.7–2s).
 - (11:50) DB volume app_dbdata was deleted+recreated at 11:39 by an unknown command (down -v?) — all fjm_demo data lost; agent re-seeded demo. Volume now `external: true` (down -v cannot delete it). Backup: `sh backup-db.sh` → app/backups/ (gitignored). Orphan encrypted uploads from before 11:39 remain in apps/api/uploads.
+- (12:10, web agent) Birth date = free CE day/month/year fields (BE year/future/31-02 errors, `parseBirthDate` in lib/format.ts). Navbar 🔥 + all lists refetch via `dataChanged()` event after confirm/slip/delete. Upload page "ประวัติการอัปโหลด" (`components/UploadHistory.tsx`): resume pending (assumes `GET /uploads/:id` → UploadResult), cancel pending (`DELETE /uploads/:id`), delete confirmed import (`DELETE /uploads/:id?withTransactions=1` `{confirm:true}`), paging. Web prod on :3000 rebuilt.

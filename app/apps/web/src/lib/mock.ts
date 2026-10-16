@@ -82,6 +82,11 @@ const streak = (gained = 0) => ({
 // Upload: April statement with two rows whose amounts were mis-read.
 type MockUpload = UploadResult & { opening: number };
 const uploads: Record<string, MockUpload> = {};
+const confirmedUploads = new Set<string>();
+const uploadLog = [
+  { id: "up1", bank: "KBANK", periodStart: "2026-05-01", periodEnd: "2026-09-30", status: "confirmed", rowCount: 55, createdAt: "2026-10-16T08:05:00Z",
+    fileName: "KBANK_2026-05_09.pdf", kind: "pdf", importedCount: 55, okCount: 55, failCount: 0, unverifiedCount: 1 },
+];
 function recheck(u: MockUpload) {
   let prev = u.opening;
   const rows = u.rows.map((r) => {
@@ -201,7 +206,30 @@ export async function mockFetch(path: string, init: RequestInit): Promise<Respon
     return ok({ ...u, opening: undefined });
   }
   if (p === "/uploads") {
-    return ok({ uploads: [{ id: "up1", bank: "KBANK", periodStart: "2026-05-01", periodEnd: "2026-09-30", status: "confirmed", rowCount: 55, createdAt: "2026-10-16T08:05:00Z" }] });
+    const pend = Object.values(uploads).filter((u) => !confirmedUploads.has(u.uploadId)).map((u) => ({
+      id: u.uploadId, bank: u.bank, periodStart: u.period.start, periodEnd: u.period.end, status: "pending", rowCount: u.rows.length,
+      createdAt: now(), fileName: `${u.bank}_${u.period.start.slice(0, 7)}.pdf`, kind: "pdf", okCount: u.check.okCount, failCount: u.check.failCount,
+    }));
+    const all = [...pend, ...uploadLog];
+    const limit = Number(url.searchParams.get("limit") ?? 10), page = Number(url.searchParams.get("page") ?? 1);
+    return ok({ uploads: all.slice((page - 1) * limit, page * limit), total: all.length });
+  }
+  {
+    const um = p.match(/^\/uploads\/([^/]+)$/);
+    if (um && method === "GET") {
+      const u = uploads[um[1]];
+      return u ? ok({ ...u, opening: undefined }) : err(404, "not_found");
+    }
+    if (um && method === "DELETE") {
+      delete uploads[um[1]];
+      const i = uploadLog.findIndex((x) => x.id === um[1]);
+      if (i >= 0) {
+        if (!body?.confirm) return err(400, "confirm_required");
+        uploadLog.splice(i, 1);
+        if (um[1] === "up1") { txs = txs.filter((t) => t.source !== "statement"); streakCurrent = 0; }
+      }
+      return ok({ ok: true });
+    }
   }
   let m = p.match(/^\/uploads\/([^/]+)\/rows\/(\d+)$/);
   if (m) {
@@ -216,6 +244,9 @@ export async function mockFetch(path: string, init: RequestInit): Promise<Respon
     const u = uploads[m[1]];
     if (u.check.failCount) return err(409, "balance_check_failed");
     streakCurrent += 1;
+    confirmedUploads.add(u.uploadId);
+    uploadLog.unshift({ id: u.uploadId, bank: u.bank, periodStart: u.period.start, periodEnd: u.period.end, status: "confirmed", rowCount: u.rows.length,
+      createdAt: now(), fileName: `${u.bank}_${u.period.start.slice(0, 7)}.pdf`, kind: "pdf", importedCount: u.rows.length, okCount: u.rows.length, failCount: 0, unverifiedCount: 0 });
     fire += 1;
     audit.push({ action: "confirm_import", target: `upload:${u.uploadId}`, at: now() });
     return ok({ imported: u.rows.length, streak: streak(1) });

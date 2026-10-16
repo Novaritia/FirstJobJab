@@ -40,6 +40,13 @@ export type ChatMsg = { role: "user" | "assistant"; content: string };
 export type DataRow = Record<string, string | number | null>;
 export type ChatReply = { reply: string; data?: DataRow[] };
 export type VoiceReply = ChatReply & { transcript: string; audio?: string };
+export type UploadLog = {
+  id: string; bank: string; periodStart: string; periodEnd: string; status: "pending" | "confirmed" | string; rowCount: number; createdAt: string;
+  fileName?: string | null; kind?: string; importedRows?: number; confirmedAt?: string | null; ocr?: boolean;
+  check?: { okCount: number; failCount: number; mode?: "per_row" | "totals" | "none" };
+  // older/mock fields
+  importedCount?: number; okCount?: number; failCount?: number; unverifiedCount?: number;
+};
 export type Slip = {
   id: string; amount?: number; date?: string; time?: string; fromName?: string; toName?: string; bank?: string; ref?: string; qrRef?: string;
   matchedTransactionId?: string | null; status: "matched" | "unmatched" | "confirmed"; confidence: number;
@@ -71,6 +78,10 @@ async function send(path: string, init: RequestInit): Promise<Response> {
 }
 
 const inflight = new Map<string, Promise<unknown>>();
+
+/** Tell every mounted useApi (navbar 🔥, lists, dashboard) to refetch after a mutation that changes server data. */
+export const DATA_CHANGED = "fjm:data-changed";
+export const dataChanged = () => window.dispatchEvent(new Event(DATA_CHANGED));
 
 /** JSON call. Identical GETs already in flight share one request (layout + page, StrictMode double effects). */
 export function api<T>(path: string, init: RequestInit = {}): Promise<T> {
