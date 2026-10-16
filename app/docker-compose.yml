@@ -49,25 +49,8 @@ services:
     depends_on: [api]
     profiles: [full]
 
-  # Nginx Proxy Manager (docs/deploy.md): terminates HTTPS from Cloudflare, forwards to web:3000 / api:4000
-  proxy:
-    image: jc21/nginx-proxy-manager:latest
-    restart: unless-stopped
-    ports:
-      - "80:80"
-      - "443:443"
-      # admin UI: host-only by default, open with an SSH tunnel (ssh -L 81:localhost:81 user@server)
-      - "${NPM_ADMIN_BIND:-127.0.0.1}:81:81"
-    volumes:
-      - npmdata:/data
-      - npmletsencrypt:/etc/letsencrypt
-    depends_on: [web, api]
-    profiles: [proxy]
-
 volumes:
   # external: `docker compose down -v` will NOT delete the database (create once: docker volume create app_dbdata)
   dbdata:
     name: app_dbdata
     external: true
-  npmdata:
-  npmletsencrypt:
