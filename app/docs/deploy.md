@@ -15,7 +15,7 @@ SSL/TLS → Overview → **Full (strict)**. SSL/TLS → Origin Server → **Crea
 WEB_ORIGIN=https://firstjobjab.novaovalist.dev
 PUBLIC_API_URL=https://api-firstjobjab.novaovalist.dev
 TRUST_PROXY=2               # Cloudflare + proxy manager → req.ip is the real client
-NPM_NETWORK=npm_default     # the network NPM is on: docker network ls
+PROXY_NETWORK=npm_default     # the network NPM is on: docker network ls
 POSTGRES_PASSWORD=...       # only used when the DB volume is created
 ```
 Plus the keys from `.env.example` (`PII_KEY`, `FILE_KEY`, `IP_HMAC_KEY`, Gemini, ElevenLabs).

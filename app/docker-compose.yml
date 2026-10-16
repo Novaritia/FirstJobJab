@@ -62,7 +62,7 @@ networks:
   proxy:
     # The Docker network Nginx Proxy Manager is on; see "docker network ls".
     # No NPM (local dev)? create it once: docker network create npm_default
-    name: ${NPM_NETWORK:-npm_default}
+    name: ${PROXY_NETWORK:-npm_default}
     external: true
 
 volumes:
